@@ -9,6 +9,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- TikTok Pixel: rdynamicpluscarrental.com (DC0KIKRC77U2TJUDJ48G) -->
+<script>
+  !function (w, d, t) {
+    w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var i="https://analytics.tiktok.com/i18n/pixel/events.js";ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};n=document.createElement("script");n.type="text/javascript",n.async=!0,n.src=i+"?sdkid="+e+"&lib="+t;e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)};
+    ttq.load('DC0KIKRC77U2TJUDJ48G');
+    ttq.page();
+  }(window, document, 'ttq');
+</script>
 <style>
   /* ================== CONFIG ================== */
   /* Edit the values in the <script> CONFIG block at the bottom of this file. */
@@ -515,13 +523,36 @@ form.addEventListener("submit", async e => {
     const res = await fetch(CONFIG.WEBHOOK_URL, { method: "POST", body: payload });
     if (!res.ok) throw new Error("HTTP " + res.status);
     showSuccess(d);
-    if (window.ttq && typeof ttq.track === "function") ttq.track("SubmitForm"); // TikTok Pixel, if installed
+    trackLead(fullPhone, d.email);
   } catch (err) {
     console.error(err);
     errBox.style.display = "block";
   } finally {
     btn.disabled = false;
   }
+});
+
+/* ================== TikTok Pixel events ================== */
+async function sha256(v) {
+  if (!v || !window.crypto?.subtle) return "";
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(v.trim().toLowerCase()));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+async function trackLead(phone, email) {
+  try {
+    if (!window.ttq) return;
+    // Advanced matching: hashed phone/email improve attribution of the lead to the ad.
+    const ids = {};
+    const p = await sha256(phone);
+    const e = await sha256(email);
+    if (p) ids.phone_number = p;
+    if (e) ids.email = e;
+    if (Object.keys(ids).length) ttq.identify(ids);
+    ttq.track("SubmitForm", { content_name: "Car rental lead form" });
+  } catch (err) { console.error(err); }
+}
+document.getElementById("waBtn").addEventListener("click", () => {
+  try { window.ttq && ttq.track("Contact", { content_name: "WhatsApp after form" }); } catch (e) {}
 });
 
 function showSuccess(d) {
