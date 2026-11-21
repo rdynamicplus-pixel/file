@@ -529,6 +529,8 @@ function showSuccess(d) {
   const s = document.getElementById("success");
   s.style.display = "block";
   const wa = document.getElementById("waBtn");
+  const carLabel = form.querySelector('input[name="car_category"]:checked')?.nextElementSibling?.querySelector("b")?.textContent?.trim();
+  if (carLabel) d = { ...d, car_category: carLabel };
   if (CONFIG.WHATSAPP_NUMBER) {
     const msg = lang === "ar"
       ? `مرحبا، أنا ${d.full_name}. بدي احجز سيارة ${d.car_category} من ${d.pickup_date} لـ ${d.return_date}.`
