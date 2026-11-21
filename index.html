@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>R Dynamic Plus | احجز سيارتك</title>
+<meta name="description" content="R Dynamic Plus Car Rental Dubai — احجز سيارتك خلال دقيقة">
+<meta name="theme-color" content="#0b0d12">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ================== CONFIG ================== */
+  /* Edit the values in the <script> CONFIG block at the bottom of this file. */
+
+  :root {
+    --bg: #0b0d12;
+    --bg-2: #12151d;
+    --card: rgba(22, 26, 36, 0.86);
+    --line: rgba(255, 255, 255, 0.09);
+    --line-strong: rgba(255, 255, 255, 0.18);
+    --text: #f3f4f7;
+    --muted: #9aa1b2;
+    --gold: #d6b25e;
+    --gold-2: #f1d58c;
+    --danger: #ff6b6b;
+    --ok: #3ddc97;
+    --radius: 14px;
+    --font: "Cairo", "Inter", system-ui, sans-serif;
+  }
+  html[lang="en"] { --font: "Inter", "Cairo", system-ui, sans-serif; }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100vh;
+    font-family: var(--font);
+    color: var(--text);
+    background:
+      radial-gradient(1200px 600px at 85% -10%, rgba(214, 178, 94, 0.16), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(214, 178, 94, 0.08), transparent 60%),
+      var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 640px; margin: 0 auto; padding: 20px 16px 48px; }
+
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 22px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .logo {
+    width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--gold-2), var(--gold));
+    color: #1a1406; font-weight: 800; font-size: 15px; letter-spacing: .5px;
+    box-shadow: 0 6px 20px rgba(214, 178, 94, .25);
+  }
+  .brand b { display: block; font-size: 16px; line-height: 1.1; }
+  .brand small { color: var(--muted); font-size: 12px; }
+  .lang {
+    border: 1px solid var(--line-strong); background: transparent; color: var(--text);
+    border-radius: 999px; padding: 7px 14px; font: 600 13px var(--font); cursor: pointer;
+  }
+  .lang:hover { border-color: var(--gold); color: var(--gold-2); }
+
+  .hero h1 { font-size: clamp(26px, 6vw, 36px); line-height: 1.25; margin: 0 0 8px; font-weight: 800; }
+  .hero h1 span { color: var(--gold-2); }
+  .hero p { margin: 0 0 18px; color: var(--muted); font-size: 15px; line-height: 1.7; }
+
+  .perks { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; padding: 0; list-style: none; }
+  .perks li {
+    font-size: 12.5px; color: var(--text); padding: 6px 12px; border-radius: 999px;
+    background: rgba(214, 178, 94, .1); border: 1px solid rgba(214, 178, 94, .25);
+  }
+  .perks li::before { content: "✓"; color: var(--gold-2); margin-inline-end: 6px; font-weight: 700; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 20px;
+    padding: 22px 18px; backdrop-filter: blur(10px);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .35);
+  }
+  @media (min-width: 560px) { .card { padding: 28px 26px; } }
+
+  .section-title {
+    font-size: 13px; font-weight: 700; color: var(--gold-2); text-transform: uppercase;
+    letter-spacing: .6px; margin: 4px 0 14px; display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .section-title + .grid { margin-bottom: 18px; }
+
+  .grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  @media (min-width: 560px) { .grid.two { grid-template-columns: 1fr 1fr; } }
+
+  .field label { display: block; font-size: 13.5px; font-weight: 600; margin-bottom: 7px; }
+  .field label .req { color: var(--gold); }
+  .field label .opt { color: var(--muted); font-weight: 400; font-size: 12px; }
+
+  input, select, textarea {
+    width: 100%; font: 500 15px var(--font); color: var(--text);
+    background: var(--bg-2); border: 1px solid var(--line-strong); border-radius: var(--radius);
+    padding: 13px 14px; outline: none; transition: border-color .15s, box-shadow .15s;
+    -webkit-appearance: none; appearance: none;
+  }
+  input::placeholder, textarea::placeholder { color: #626a7d; }
+  input:focus, select:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(214, 178, 94, .18); }
+  input[type="date"] { min-height: 48px; color-scheme: dark; }
+  select {
+    background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position: calc(100% - 20px) 50%, calc(100% - 15px) 50%;
+    background-size: 5px 5px; background-repeat: no-repeat; padding-inline-end: 38px;
+  }
+  html[dir="rtl"] select { background-position: 15px 50%, 20px 50%; }
+  textarea { min-height: 92px; resize: vertical; }
+
+  .phone { display: flex; gap: 8px; direction: ltr; }
+  .phone select { width: 118px; flex: none; }
+  .phone input { flex: 1; min-width: 0; }
+
+  .chips { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  @media (min-width: 560px) { .chips.cars { grid-template-columns: repeat(3, 1fr); } }
+  .chip { position: relative; display: block; }
+  .chip input { position: absolute; inset: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  html, body { overflow-x: clip; }
+  .chip span {
+    display: flex; align-items: center; justify-content: center; gap: 6px; text-align: center;
+    min-height: 48px; padding: 10px 8px; border-radius: var(--radius); cursor: pointer;
+    background: var(--bg-2); border: 1px solid var(--line-strong); font-size: 14px; font-weight: 600;
+    transition: all .15s;
+  }
+  .chip span em { font-style: normal; font-size: 18px; }
+  .chip input:checked + span { border-color: var(--gold); background: rgba(214, 178, 94, .14); color: var(--gold-2); }
+  .chip input:focus-visible + span { box-shadow: 0 0 0 3px rgba(214, 178, 94, .25); }
+
+  .err { color: var(--danger); font-size: 12.5px; margin-top: 6px; display: none; }
+  .field.invalid input, .field.invalid select { border-color: var(--danger); }
+  .field.invalid .err { display: block; }
+
+  .consent { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: var(--muted); margin: 6px 0 18px; line-height: 1.6; }
+  .consent input { width: 18px; height: 18px; flex: none; margin-top: 3px; accent-color: var(--gold); -webkit-appearance: checkbox; appearance: auto; padding: 0; }
+
+  .hp { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; opacity: 0; }
+  form { position: relative; }
+
+  .submit {
+    width: 100%; border: 0; cursor: pointer; border-radius: var(--radius);
+    padding: 16px; font: 800 17px var(--font); color: #1a1406;
+    background: linear-gradient(135deg, var(--gold-2), var(--gold));
+    box-shadow: 0 10px 30px rgba(214, 178, 94, .3); transition: transform .1s, filter .15s;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .submit:hover { filter: brightness(1.05); }
+  .submit:active { transform: translateY(1px); }
+  .submit[disabled] { opacity: .7; cursor: wait; }
+  .spinner { width: 18px; height: 18px; border: 2.5px solid rgba(26, 20, 6, .3); border-top-color: #1a1406; border-radius: 50%; animation: spin .8s linear infinite; display: none; }
+  .submit[disabled] .spinner { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .form-error { display: none; margin-top: 12px; padding: 12px 14px; border-radius: 12px; font-size: 13.5px;
+    background: rgba(255, 107, 107, .1); border: 1px solid rgba(255, 107, 107, .35); color: #ffb3b3; }
+
+  .trust { display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; margin-top: 16px; color: var(--muted); font-size: 12.5px; }
+
+  /* success */
+  .success { display: none; text-align: center; padding: 18px 4px 6px; }
+  .success .tick {
+    width: 74px; height: 74px; margin: 0 auto 16px; border-radius: 50%; display: grid; place-items: center;
+    background: rgba(61, 220, 151, .12); border: 1px solid rgba(61, 220, 151, .4); color: var(--ok); font-size: 36px;
+  }
+  .success h2 { margin: 0 0 8px; font-size: 24px; }
+  .success p { margin: 0 0 20px; color: var(--muted); line-height: 1.7; }
+  .wa {
+    display: inline-flex; align-items: center; gap: 8px; text-decoration: none; color: #fff;
+    background: #25d366; padding: 13px 22px; border-radius: 999px; font-weight: 700;
+  }
+  .again { display: block; margin: 14px auto 0; background: none; border: 0; color: var(--muted); font: 600 13px var(--font); cursor: pointer; text-decoration: underline; }
+
+  footer { text-align: center; color: #5d6474; font-size: 12px; margin-top: 26px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo" dir="ltr">R+</div>
+      <div>
+        <b>R Dynamic Plus</b>
+        <small data-i18n="brandSub">تأجير سيارات · دبي</small>
+      </div>
+    </div>
+    <button class="lang" id="langBtn" type="button" aria-label="Switch language">English</button>
+  </header>
+
+  <section class="hero">
+    <h1 data-i18n-html="title">احجز سيارتك <span>بدقيقة وحدة</span></h1>
+    <p data-i18n="subtitle">عبّي بياناتك وفريقنا بيتواصل معك على الواتساب بأسرع وقت بأفضل سعر متوفر.</p>
+    <ul class="perks">
+      <li data-i18n="p1">توصيل للباب</li>
+      <li data-i18n="p2">بدون رسوم مخفية</li>
+      <li data-i18n="p3">تأمين شامل</li>
+      <li data-i18n="p4">دعم 24/7</li>
+    </ul>
+  </section>
+
+  <main class="card">
+    <form id="leadForm" novalidate>
+      <div class="section-title" data-i18n="s1">بياناتك</div>
+      <div class="grid">
+        <div class="field" data-field="full_name">
+          <label for="full_name"><span data-i18n="name">الاسم الكامل</span> <span class="req">*</span></label>
+          <input id="full_name" name="full_name" autocomplete="name" data-i18n-ph="namePh" placeholder="مثال: أحمد محمد">
+          <div class="err" data-i18n="errName">رجاءً اكتب اسمك</div>
+        </div>
+
+        <div class="field" data-field="phone">
+          <label for="phone"><span data-i18n="phone">رقم الجوال (واتساب)</span> <span class="req">*</span></label>
+          <div class="phone">
+            <select id="country_code" name="country_code" aria-label="Country code">
+              <option value="+971" selected>🇦🇪 +971</option>
+              <option value="+966">🇸🇦 +966</option>
+              <option value="+965">🇰🇼 +965</option>
+              <option value="+974">🇶🇦 +974</option>
+              <option value="+973">🇧🇭 +973</option>
+              <option value="+968">🇴🇲 +968</option>
+              <option value="+962">🇯🇴 +962</option>
+              <option value="+961">🇱🇧 +961</option>
+              <option value="+963">🇸🇾 +963</option>
+              <option value="+20">🇪🇬 +20</option>
+              <option value="+44">🇬🇧 +44</option>
+              <option value="+7">🇷🇺 +7</option>
+              <option value="+91">🇮🇳 +91</option>
+              <option value="+1">🇺🇸 +1</option>
+              <option value="+49">🇩🇪 +49</option>
+              <option value="+33">🇫🇷 +33</option>
+              <option value="other">🌍 Other</option>
+            </select>
+            <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="50 123 4567">
+          </div>
+          <div class="err" data-i18n="errPhone">رجاءً اكتب رقم صحيح</div>
+        </div>
+
+        <div class="field" data-field="email">
+          <label for="email"><span data-i18n="email">الإيميل</span> <span class="opt" data-i18n="optional">(اختياري)</span></label>
+          <input id="email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="name@email.com" dir="ltr">
+          <div class="err" data-i18n="errEmail">الإيميل غير صحيح</div>
+        </div>
+
+        <div class="field" data-field="customer_type">
+          <label><span data-i18n="ctype">أنت</span> <span class="req">*</span></label>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="customer_type" value="Resident"><span data-i18n="resident">مقيم بالإمارات</span></label>
+            <label class="chip"><input type="radio" name="customer_type" value="Tourist"><span data-i18n="tourist">سائح / زائر</span></label>
+          </div>
+          <div class="err" data-i18n="errChoose">رجاءً اختر واحد</div>
+        </div>
+      </div>
+
+      <div class="section-title" data-i18n="s2">تفاصيل الحجز</div>
+      <div class="grid">
+        <div class="field" data-field="car_category">
+          <label><span data-i18n="car">نوع السيارة</span> <span class="req">*</span></label>
+          <div class="chips cars">
+            <label class="chip"><input type="radio" name="car_category" value="Economy"><span><em>🚗</em><b data-i18n="c1">اقتصادية</b></span></label>
+            <label class="chip"><input type="radio" name="car_category" value="SUV"><span><em>🚙</em><b data-i18n="c2">SUV</b></span></label>
+            <label class="chip"><input type="radio" name="car_category" value="Luxury"><span><em>✨</em><b data-i18n="c3">فخمة</b></span></label>
+            <label class="chip"><input type="radio" name="car_category" value="Sports"><span><em>🏎️</em><b data-i18n="c4">رياضية</b></span></label>
+            <label class="chip"><input type="radio" name="car_category" value="Family / Van"><span><em>🚐</em><b data-i18n="c5">عائلية / فان</b></span></label>
+            <label class="chip"><input type="radio" name="car_category" value="Not sure"><span><em>💬</em><b data-i18n="c6">ساعدوني أختار</b></span></label>
+          </div>
+          <div class="err" data-i18n="errChoose">رجاءً اختر واحد</div>
+        </div>
+
+        <div class="field" data-field="car_model">
+          <label for="car_model"><span data-i18n="model">موديل معيّن ببالك؟</span> <span class="opt" data-i18n="optional">(اختياري)</span></label>
+          <input id="car_model" name="car_model" data-i18n-ph="modelPh" placeholder="مثال: نيسان باترول، مرسيدس G">
+        </div>
+
+        <div class="grid two">
+          <div class="field" data-field="pickup_date">
+            <label for="pickup_date"><span data-i18n="pickup">تاريخ الاستلام</span> <span class="req">*</span></label>
+            <input id="pickup_date" name="pickup_date" type="date">
+            <div class="err" data-i18n="errDate">اختر تاريخ</div>
+          </div>
+          <div class="field" data-field="return_date">
+            <label for="return_date"><span data-i18n="return">تاريخ التسليم</span> <span class="req">*</span></label>
+            <input id="return_date" name="return_date" type="date">
+            <div class="err" data-i18n="errReturn">لازم يكون بعد تاريخ الاستلام</div>
+          </div>
+        </div>
+
+        <div class="grid two">
+          <div class="field" data-field="pickup_location">
+            <label for="pickup_location"><span data-i18n="loc">مكان الاستلام</span> <span class="req">*</span></label>
+            <select id="pickup_location" name="pickup_location">
+              <option value="" data-i18n="choose">— اختر —</option>
+              <option value="Dubai Airport (DXB)" data-i18n="l1">مطار دبي (DXB)</option>
+              <option value="Dubai - Delivery to address" data-i18n="l2">دبي - توصيل للعنوان</option>
+              <option value="Abu Dhabi" data-i18n="l3">أبوظبي</option>
+              <option value="Sharjah" data-i18n="l4">الشارقة</option>
+              <option value="Other emirate" data-i18n="l5">إمارة ثانية</option>
+            </select>
+            <div class="err" data-i18n="errChoose">رجاءً اختر واحد</div>
+          </div>
+          <div class="field" data-field="budget">
+            <label for="budget"><span data-i18n="budget">الميزانية اليومية</span> <span class="opt" data-i18n="optional">(اختياري)</span></label>
+            <select id="budget" name="budget">
+              <option value="" data-i18n="choose">— اختر —</option>
+              <option value="< 200 AED">&lt; 200 AED</option>
+              <option value="200 - 500 AED">200 – 500 AED</option>
+              <option value="500 - 1000 AED">500 – 1,000 AED</option>
+              <option value="1000+ AED">1,000+ AED</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field" data-field="notes">
+          <label for="notes"><span data-i18n="notes">ملاحظات</span> <span class="opt" data-i18n="optional">(اختياري)</span></label>
+          <textarea id="notes" name="notes" data-i18n-ph="notesPh" placeholder="أي طلب خاص؟ كرسي أطفال، سائق، تأجير شهري..."></textarea>
+        </div>
+      </div>
+
+      <div class="hp" aria-hidden="true">
+        <label>Company <input name="company" tabindex="-1" autocomplete="off"></label>
+      </div>
+
+      <label class="consent" data-field="consent">
+        <input type="checkbox" id="consent" name="consent" checked>
+        <span data-i18n="consentTxt">بوافق إن فريق R Dynamic Plus يتواصل معي على الواتساب أو الاتصال بخصوص طلبي.</span>
+      </label>
+
+      <button class="submit" id="submitBtn" type="submit">
+        <span class="spinner"></span>
+        <span data-i18n="submit">احصل على عرض السعر</span>
+      </button>
+      <div class="form-error" id="formError" data-i18n="errSend">صار خطأ بالإرسال. جرّب مرة ثانية أو تواصل معنا على الواتساب.</div>
+
+      <div class="trust">
+        <span data-i18n="t1">🔒 بياناتك محمية</span>
+        <span data-i18n="t2">⚡ رد خلال دقائق</span>
+      </div>
+    </form>
+
+    <div class="success" id="success" role="status" aria-live="polite">
+      <div class="tick">✓</div>
+      <h2 data-i18n="okTitle">تم استلام طلبك!</h2>
+      <p data-i18n="okText">شكراً إلك. فريقنا بيتواصل معك على الواتساب خلال دقائق بأفضل عرض.</p>
+      <a class="wa" id="waBtn" href="#" target="_blank" rel="noopener" hidden>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.3-.5 0-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.8 0-1.4.7-2 1-2.3.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.1.1.6-.1 1.2Z"/></svg>
+        <span data-i18n="waTxt">كلّمنا على الواتساب هلّق</span>
+      </a>
+      <button class="again" id="againBtn" type="button" data-i18n="again">إرسال طلب جديد</button>
+    </div>
+  </main>
+
+  <footer>© <span id="yr"></span> R Dynamic Plus Car Rental · Dubai, UAE</footer>
+</div>
+
+<script>
+/* ================== CONFIG ================== */
+const CONFIG = {
+  // Paste the Zapier "Catch Hook" URL here (from the Zapier workflow trigger).
+  WEBHOOK_URL: "PASTE_ZAPIER_WEBHOOK_URL_HERE",
+  // WhatsApp number in international format, digits only (e.g. "971501234567"). Leave "" to hide the button.
+  WHATSAPP_NUMBER: "",
+  // Default lead source label written to the sheet when no utm_source is in the URL.
+  DEFAULT_SOURCE: "Website Form",
+};
+
+/* ================== i18n ================== */
+const T = {
+  en: {
+    brandSub: "Car Rental · Dubai",
+    title: 'Book your car <span>in one minute</span>',
+    subtitle: "Fill in your details and our team will reach you on WhatsApp right away with the best available price.",
+    p1: "Door-to-door delivery", p2: "No hidden fees", p3: "Full insurance", p4: "24/7 support",
+    s1: "Your details", s2: "Booking details",
+    name: "Full name", namePh: "e.g. John Smith",
+    phone: "Mobile number (WhatsApp)", email: "Email", optional: "(optional)",
+    ctype: "You are", resident: "UAE resident", tourist: "Tourist / visitor",
+    car: "Car type", c1: "Economy", c2: "SUV", c3: "Luxury", c4: "Sports", c5: "Family / Van", c6: "Help me choose",
+    model: "Any specific model in mind?", modelPh: "e.g. Nissan Patrol, Mercedes G-Class",
+    pickup: "Pick-up date", return: "Return date",
+    loc: "Pick-up location", choose: "— Select —",
+    l1: "Dubai Airport (DXB)", l2: "Dubai – delivery to address", l3: "Abu Dhabi", l4: "Sharjah", l5: "Other emirate",
+    budget: "Daily budget", notes: "Notes", notesPh: "Any special request? Child seat, driver, monthly rental...",
+    consentTxt: "I agree that R Dynamic Plus may contact me by WhatsApp or phone about my request.",
+    submit: "Get my quote",
+    errName: "Please enter your name", errPhone: "Please enter a valid number", errEmail: "Invalid email",
+    errChoose: "Please choose one", errDate: "Pick a date", errReturn: "Must be after the pick-up date",
+    errConsent: "Please accept to continue",
+    errSend: "Something went wrong. Please try again or message us on WhatsApp.",
+    t1: "🔒 Your data is safe", t2: "⚡ Reply within minutes",
+    okTitle: "Request received!", okText: "Thank you. Our team will contact you on WhatsApp within minutes with the best offer.",
+    waTxt: "Chat with us on WhatsApp now", again: "Send another request",
+    langBtn: "العربية",
+  },
+};
+const AR = {}; // captured from the HTML on load
+let lang = "ar";
+
+function captureArabic() {
+  document.querySelectorAll("[data-i18n]").forEach(el => { AR[el.dataset.i18n] ??= el.textContent; });
+  document.querySelectorAll("[data-i18n-html]").forEach(el => { AR[el.dataset.i18nHtml] ??= el.innerHTML; });
+  document.querySelectorAll("[data-i18n-ph]").forEach(el => { AR[el.dataset.i18nPh] ??= el.placeholder; });
+  AR.langBtn = "English";
+  AR.errConsent = "رجاءً وافق للمتابعة";
+}
+function t(key) { return (lang === "en" ? T.en[key] : AR[key]) ?? key; }
+function applyLang(l) {
+  lang = l;
+  document.documentElement.lang = l;
+  document.documentElement.dir = l === "ar" ? "rtl" : "ltr";
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
+  document.querySelectorAll("[data-i18n-ph]").forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+  document.getElementById("langBtn").textContent = t("langBtn");
+  document.title = l === "ar" ? "R Dynamic Plus | احجز سيارتك" : "R Dynamic Plus | Book your car";
+  try { localStorage.setItem("rdp_lang", l); } catch (e) {}
+}
+
+/* ================== form ================== */
+const form = document.getElementById("leadForm");
+const params = new URLSearchParams(location.search);
+const today = new Date(); today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+const todayStr = today.toISOString().slice(0, 10);
+const pickup = document.getElementById("pickup_date");
+const ret = document.getElementById("return_date");
+pickup.min = todayStr; ret.min = todayStr;
+pickup.addEventListener("change", () => { ret.min = pickup.value || todayStr; });
+document.getElementById("yr").textContent = new Date().getFullYear();
+
+function setInvalid(name, bad, msgKey) {
+  const f = form.querySelector(`[data-field="${name}"]`);
+  if (!f) return;
+  f.classList.toggle("invalid", bad);
+  if (msgKey) { const e = f.querySelector(".err"); if (e) { e.dataset.i18n = msgKey; e.textContent = t(msgKey); } }
+}
+form.addEventListener("input", e => { const f = e.target.closest("[data-field]"); if (f) f.classList.remove("invalid"); });
+form.addEventListener("change", e => { const f = e.target.closest("[data-field]"); if (f) f.classList.remove("invalid"); });
+
+function validate(d) {
+  let ok = true, first = null;
+  const mark = (name, bad, key) => { setInvalid(name, bad, key); if (bad) { ok = false; first ??= name; } };
+  mark("full_name", d.full_name.trim().length < 2, "errName");
+  const digits = d.phone.replace(/\D/g, "");
+  mark("phone", digits.length < 7 || digits.length > 15, "errPhone");
+  mark("email", d.email !== "" && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(d.email), "errEmail");
+  mark("customer_type", !d.customer_type, "errChoose");
+  mark("car_category", !d.car_category, "errChoose");
+  mark("pickup_date", !d.pickup_date, "errDate");
+  mark("return_date", !d.return_date || (d.pickup_date && d.return_date < d.pickup_date), d.return_date ? "errReturn" : "errDate");
+  mark("pickup_location", !d.pickup_location, "errChoose");
+  if (!d.consent) { ok = false; first ??= "consent"; alert(t("errConsent")); }
+  if (first) form.querySelector(`[data-field="${first}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  return ok;
+}
+
+function daysBetween(a, b) {
+  if (!a || !b) return "";
+  return Math.max(1, Math.round((new Date(b) - new Date(a)) / 86400000));
+}
+
+form.addEventListener("submit", async e => {
+  e.preventDefault();
+  const fd = new FormData(form);
+  if (fd.get("company")) return; // honeypot: bots fill hidden field
+
+  const d = {
+    full_name: (fd.get("full_name") || "").toString(),
+    phone: (fd.get("phone") || "").toString(),
+    country_code: (fd.get("country_code") || "").toString(),
+    email: (fd.get("email") || "").toString().trim(),
+    customer_type: fd.get("customer_type") || "",
+    car_category: fd.get("car_category") || "",
+    car_model: (fd.get("car_model") || "").toString(),
+    pickup_date: fd.get("pickup_date") || "",
+    return_date: fd.get("return_date") || "",
+    pickup_location: fd.get("pickup_location") || "",
+    budget: fd.get("budget") || "",
+    notes: (fd.get("notes") || "").toString(),
+    consent: !!fd.get("consent"),
+  };
+  if (!validate(d)) return;
+
+  const localDigits = d.phone.replace(/\D/g, "").replace(/^0+/, "");
+  const fullPhone = d.country_code === "other" ? "+" + d.phone.replace(/\D/g, "") : d.country_code + localDigits;
+
+  const payload = new URLSearchParams({
+    submitted_at: new Date().toISOString(),
+    full_name: d.full_name.trim(),
+    phone: fullPhone,
+    email: d.email,
+    customer_type: d.customer_type,
+    car_category: d.car_category,
+    car_model: d.car_model.trim(),
+    pickup_date: d.pickup_date,
+    return_date: d.return_date,
+    rental_days: String(daysBetween(d.pickup_date, d.return_date)),
+    pickup_location: d.pickup_location,
+    budget: d.budget,
+    notes: d.notes.trim(),
+    language: lang,
+    lead_source: params.get("utm_source") || CONFIG.DEFAULT_SOURCE,
+    utm_medium: params.get("utm_medium") || "",
+    utm_campaign: params.get("utm_campaign") || "",
+    utm_content: params.get("utm_content") || "",
+    ttclid: params.get("ttclid") || "",
+    page_url: location.href,
+  });
+
+  const btn = document.getElementById("submitBtn");
+  const errBox = document.getElementById("formError");
+  errBox.style.display = "none";
+  btn.disabled = true;
+  try {
+    if (!/^https:\/\/hooks\.zapier\.com\//.test(CONFIG.WEBHOOK_URL)) throw new Error("Webhook URL not configured");
+    // urlencoded body = "simple" request, so no CORS preflight is needed.
+    const res = await fetch(CONFIG.WEBHOOK_URL, { method: "POST", body: payload });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    showSuccess(d);
+    if (window.ttq && typeof ttq.track === "function") ttq.track("SubmitForm"); // TikTok Pixel, if installed
+  } catch (err) {
+    console.error(err);
+    errBox.style.display = "block";
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+function showSuccess(d) {
+  form.style.display = "none";
+  const s = document.getElementById("success");
+  s.style.display = "block";
+  const wa = document.getElementById("waBtn");
+  if (CONFIG.WHATSAPP_NUMBER) {
+    const msg = lang === "ar"
+      ? `مرحبا، أنا ${d.full_name}. بدي احجز سيارة ${d.car_category} من ${d.pickup_date} لـ ${d.return_date}.`
+      : `Hi, I'm ${d.full_name}. I'd like to book a ${d.car_category} car from ${d.pickup_date} to ${d.return_date}.`;
+    wa.href = `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
+    wa.hidden = false;
+  }
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+document.getElementById("againBtn").addEventListener("click", () => {
+  form.reset();
+  document.getElementById("success").style.display = "none";
+  form.style.display = "block";
+});
+
+/* ================== init ================== */
+captureArabic();
+let saved = null;
+try { saved = localStorage.getItem("rdp_lang"); } catch (e) {}
+const initial = params.get("lang") || saved || "ar";
+if (initial === "en") applyLang("en");
+document.getElementById("langBtn").addEventListener("click", () => applyLang(lang === "ar" ? "en" : "ar"));
+</script>
+</body>
+</html>
