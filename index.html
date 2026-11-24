@@ -348,10 +348,10 @@
     <div class="success" id="success" role="status" aria-live="polite">
       <div class="tick">✓</div>
       <h2 data-i18n="okTitle">تم استلام طلبك!</h2>
-      <p data-i18n="okText">شكراً إلك. فريقنا بيتواصل معك على الواتساب خلال دقائق بأفضل عرض.</p>
+      <p data-i18n="okText">شكراً إلك! آخر خطوة: اضغط الزر وابعت لنا الرسالة على الواتساب لتأكيد طلبك، وفريقنا بيرد عليك خلال دقائق بأفضل عرض.</p>
       <a class="wa" id="waBtn" href="#" target="_blank" rel="noopener" hidden>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.3-.5 0-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.8 0-1.4.7-2 1-2.3.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.1.1.6-.1 1.2Z"/></svg>
-        <span data-i18n="waTxt">كلّمنا على الواتساب هلّق</span>
+        <span data-i18n="waTxt">أكّد طلبك على الواتساب</span>
       </a>
       <button class="again" id="againBtn" type="button" data-i18n="again">إرسال طلب جديد</button>
     </div>
@@ -395,8 +395,8 @@ const T = {
     errConsent: "Please accept to continue",
     errSend: "Something went wrong. Please try again or message us on WhatsApp.",
     t1: "🔒 Your data is safe", t2: "⚡ Reply within minutes",
-    okTitle: "Request received!", okText: "Thank you. Our team will contact you on WhatsApp within minutes with the best offer.",
-    waTxt: "Chat with us on WhatsApp now", again: "Send another request",
+    okTitle: "Request received!", okText: "Thank you! One last step: tap the button and send us the message on WhatsApp to confirm your request. Our team will reply within minutes with the best offer.",
+    waTxt: "Confirm your request on WhatsApp", again: "Send another request",
     langBtn: "العربية",
   },
 };
@@ -425,6 +425,8 @@ function applyLang(l) {
 
 /* ================== form ================== */
 const form = document.getElementById("leadForm");
+const FORM_LOADED_AT = Date.now();
+let REF_CODE = "";
 const params = new URLSearchParams(location.search);
 const today = new Date(); today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
 const todayStr = today.toISOString().slice(0, 10);
@@ -443,12 +445,58 @@ function setInvalid(name, bad, msgKey) {
 form.addEventListener("input", e => { const f = e.target.closest("[data-field]"); if (f) f.classList.remove("invalid"); });
 form.addEventListener("change", e => { const f = e.target.closest("[data-field]"); if (f) f.classList.remove("invalid"); });
 
+/* ---- Phone rules: national mobile number (without country code) per country ---- */
+const MOBILE_RULES = {
+  "+971": /^5\d{8}$/,            // UAE: 5X XXX XXXX
+  "+966": /^5\d{8}$/,            // KSA
+  "+965": /^[569]\d{7}$/,        // Kuwait
+  "+974": /^[3567]\d{7}$/,       // Qatar
+  "+973": /^[36]\d{7}$/,         // Bahrain
+  "+968": /^[79]\d{7}$/,         // Oman
+  "+962": /^7[789]\d{7}$/,       // Jordan
+  "+961": /^(3\d{6}|(7[0169]|81)\d{6})$/, // Lebanon
+  "+963": /^9\d{8}$/,            // Syria
+  "+20":  /^1[0125]\d{8}$/,      // Egypt
+  "+44":  /^7\d{9}$/,            // UK
+  "+7":   /^9\d{9}$/,            // Russia
+  "+91":  /^[6-9]\d{9}$/,        // India
+  "+1":   /^[2-9]\d{2}[2-9]\d{6}$/, // US/Canada
+  "+49":  /^1[5-7]\d{8,9}$/,     // Germany
+  "+33":  /^[67]\d{8}$/,         // France
+};
+// Returns the national digits, removing a typed 00/+ prefix, a repeated country code and leading zeros.
+function nationalDigits(raw, cc) {
+  let n = raw.replace(/\D/g, "").replace(/^00/, "");
+  const ccDigits = (cc || "").replace(/\D/g, "");
+  if (ccDigits) {
+    while (n.startsWith(ccDigits) && n.length > ccDigits.length + 6) n = n.slice(ccDigits.length);
+  }
+  return n.replace(/^0+/, "");
+}
+function phoneLooksFake(n) {
+  return /^(\d)\1+$/.test(n.slice(-7)) || /(0123456|1234567|2345678|3456789|9876543)/.test(n);
+}
+function phoneValid(raw, cc) {
+  if (cc === "other") {
+    const n = raw.replace(/\D/g, "").replace(/^00/, "");
+    return n.length >= 8 && n.length <= 15 && !phoneLooksFake(n);
+  }
+  const n = nationalDigits(raw, cc);
+  const rule = MOBILE_RULES[cc];
+  return (rule ? rule.test(n) : n.length >= 7 && n.length <= 12) && !phoneLooksFake(n);
+}
+function nameValid(name) {
+  const s = name.trim();
+  if (s.length < 2 || s.length > 60) return false;
+  if (/\d|https?:|www\.|@/.test(s)) return false;          // digits, links, emails
+  return /[A-Za-z؀-ۿ]{2,}/.test(s);              // at least 2 real letters
+}
+
 function validate(d) {
   let ok = true, first = null;
   const mark = (name, bad, key) => { setInvalid(name, bad, key); if (bad) { ok = false; first ??= name; } };
-  mark("full_name", d.full_name.trim().length < 2, "errName");
-  const digits = d.phone.replace(/\D/g, "");
-  mark("phone", digits.length < 7 || digits.length > 15, "errPhone");
+  mark("full_name", !nameValid(d.full_name), "errName");
+  mark("phone", !phoneValid(d.phone, d.country_code), "errPhone");
   mark("email", d.email !== "" && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(d.email), "errEmail");
   mark("customer_type", !d.customer_type, "errChoose");
   mark("car_category", !d.car_category, "errChoose");
@@ -487,8 +535,15 @@ form.addEventListener("submit", async e => {
   };
   if (!validate(d)) return;
 
-  const localDigits = d.phone.replace(/\D/g, "").replace(/^0+/, "");
-  const fullPhone = d.country_code === "other" ? "+" + d.phone.replace(/\D/g, "") : d.country_code + localDigits;
+  // Time trap: a person needs well over 5 seconds to fill this form; bots submit instantly.
+  // Show the success screen but send nothing, so the bot gets no signal.
+  if (Date.now() - FORM_LOADED_AT < 5000) { showSuccess(d); return; }
+
+  const fullPhone = d.country_code === "other"
+    ? "+" + d.phone.replace(/\D/g, "").replace(/^00/, "")
+    : d.country_code + nationalDigits(d.phone, d.country_code);
+  // Short reference the customer sends back on WhatsApp to confirm the request is real.
+  REF_CODE = "RDP-" + String(Math.floor(1000 + Math.random() * 9000));
 
   const payload = new URLSearchParams({
     submitted_at: new Date().toISOString(),
@@ -511,6 +566,8 @@ form.addEventListener("submit", async e => {
     utm_content: params.get("utm_content") || "",
     ttclid: params.get("ttclid") || "",
     page_url: location.href,
+    ref_code: REF_CODE,
+    fill_seconds: String(Math.round((Date.now() - FORM_LOADED_AT) / 1000)),
   });
 
   const btn = document.getElementById("submitBtn");
@@ -563,9 +620,10 @@ function showSuccess(d) {
   const carLabel = form.querySelector('input[name="car_category"]:checked')?.nextElementSibling?.querySelector("b")?.textContent?.trim();
   if (carLabel) d = { ...d, car_category: carLabel };
   if (CONFIG.WHATSAPP_NUMBER) {
+    const ref = REF_CODE ? (lang === "ar" ? ` رقم الطلب: ${REF_CODE}` : ` Request no: ${REF_CODE}`) : "";
     const msg = lang === "ar"
-      ? `مرحبا، أنا ${d.full_name}. بدي احجز سيارة ${d.car_category} من ${d.pickup_date} لـ ${d.return_date}.`
-      : `Hi, I'm ${d.full_name}. I'd like to book a ${d.car_category} car from ${d.pickup_date} to ${d.return_date}.`;
+      ? `مرحبا، أنا ${d.full_name}. بدي احجز سيارة ${d.car_category} من ${d.pickup_date} لـ ${d.return_date}.${ref}`
+      : `Hi, I'm ${d.full_name}. I'd like to book a ${d.car_category} car from ${d.pickup_date} to ${d.return_date}.${ref}`;
     wa.href = `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
     wa.hidden = false;
   }
