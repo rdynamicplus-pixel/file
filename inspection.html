@@ -1,0 +1,1084 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>R Dynamic Plus | فحص السيارة</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0b0d12">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Driver-side 360° vehicle inspection, done together with the customer at
+     delivery and at return. Everything stays on the driver's phone (IndexedDB)
+     until it is shared: no server. Edit CONFIG at the bottom of the file. */
+  :root {
+    --bg: #0b0d12;
+    --bg-2: #12151d;
+    --card: rgba(22, 26, 36, 0.92);
+    --line: rgba(255, 255, 255, 0.09);
+    --line-strong: rgba(255, 255, 255, 0.18);
+    --text: #f3f4f7;
+    --muted: #9aa1b2;
+    --gold: #d6b25e;
+    --gold-2: #f1d58c;
+    --danger: #ff6b6b;
+    --ok: #3ddc97;
+    --radius: 14px;
+    --font: "Cairo", "Inter", system-ui, sans-serif;
+  }
+  html[lang="en"] { --font: "Inter", "Cairo", system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; overflow-x: clip; }
+  body {
+    min-height: 100vh; font-family: var(--font); color: var(--text);
+    background:
+      radial-gradient(1200px 600px at 85% -10%, rgba(214, 178, 94, 0.14), transparent 60%),
+      var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 16px 16px 120px; }
+
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .logo {
+    width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--gold-2), var(--gold));
+    color: #1a1406; font-weight: 800; font-size: 14px;
+  }
+  .brand b { display: block; font-size: 15px; line-height: 1.1; }
+  .brand small { color: var(--muted); font-size: 12px; }
+  .hbtns { display: flex; gap: 6px; }
+  .pill {
+    border: 1px solid var(--line-strong); background: transparent; color: var(--text);
+    border-radius: 999px; padding: 7px 12px; font: 600 12.5px var(--font); cursor: pointer;
+  }
+  .pill:hover { border-color: var(--gold); color: var(--gold-2); }
+
+  /* progress */
+  .steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 16px; }
+  .steps div { text-align: center; font-size: 11px; color: var(--muted); }
+  .steps div::before {
+    content: ""; display: block; height: 4px; border-radius: 4px; background: var(--line-strong); margin-bottom: 6px;
+  }
+  .steps div.done::before, .steps div.on::before { background: var(--gold); }
+  .steps div.on { color: var(--gold-2); font-weight: 700; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 20px;
+    padding: 20px 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, .35);
+  }
+  h2 { font-size: 20px; margin: 0 0 4px; }
+  .lead { color: var(--muted); font-size: 14px; line-height: 1.7; margin: 0 0 16px; }
+
+  .grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  @media (min-width: 560px) { .grid.two { grid-template-columns: 1fr 1fr; } }
+  .field label { display: block; font-size: 13.5px; font-weight: 600; margin-bottom: 7px; }
+  .field label .req { color: var(--gold); }
+  input, select, textarea {
+    width: 100%; font: 500 15px var(--font); color: var(--text);
+    background: var(--bg-2); border: 1px solid var(--line-strong); border-radius: var(--radius);
+    padding: 13px 14px; outline: none; -webkit-appearance: none; appearance: none;
+  }
+  input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(214, 178, 94, .18); }
+  input.bad { border-color: var(--danger); }
+  textarea { min-height: 80px; resize: vertical; }
+  .ltr { direction: ltr; text-align: start; }
+  html[dir="rtl"] .ltr { text-align: right; }
+  .phone { display: flex; gap: 8px; direction: ltr; }
+  .phone input:first-child { width: 86px; flex: none; text-align: center; }
+  .phone input:last-child { flex: 1; min-width: 0; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { position: relative; }
+  .chip input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+  .chip span {
+    display: flex; align-items: center; justify-content: center; min-width: 56px; min-height: 44px;
+    padding: 8px 14px; border-radius: var(--radius); cursor: pointer; background: var(--bg-2);
+    border: 1px solid var(--line-strong); font-size: 14px; font-weight: 600;
+  }
+  .chip input:checked + span { border-color: var(--gold); background: rgba(214, 178, 94, .14); color: var(--gold-2); }
+  .chips.big .chip { flex: 1; }
+  .chips.big .chip span { min-height: 54px; font-size: 15px; }
+
+  /* photos */
+  .shots { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  @media (min-width: 560px) { .shots { grid-template-columns: repeat(3, 1fr); } }
+  .shot {
+    position: relative; aspect-ratio: 4 / 3; border-radius: var(--radius); overflow: hidden;
+    border: 1.5px dashed var(--line-strong); background: var(--bg-2); cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    text-align: center; padding: 8px; font-size: 13px; font-weight: 600; color: var(--muted);
+  }
+  .shot .n {
+    width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--line-strong); color: var(--text); font-size: 12px; font-weight: 700;
+  }
+  .shot.has { border: 1.5px solid var(--ok); color: #fff; padding: 0; }
+  .shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .shot.has .cap {
+    position: absolute; inset: auto 0 0 0; padding: 4px 8px; font-size: 12px;
+    background: linear-gradient(transparent, rgba(0,0,0,.8));
+  }
+  .shot.has .ok {
+    position: absolute; top: 6px; inset-inline-start: 6px; width: 24px; height: 24px; border-radius: 50%;
+    background: var(--ok); color: #062; display: grid; place-items: center; font-weight: 800; font-size: 14px;
+  }
+  .counter { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
+  .counter b { color: var(--gold-2); }
+  .video {
+    margin-top: 14px; display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+    border-radius: var(--radius); border: 1px solid var(--line-strong); background: var(--bg-2);
+  }
+  .video .t { flex: 1; font-size: 13.5px; }
+  .video .t small { display: block; color: var(--muted); font-size: 12px; }
+
+  /* damage diagram */
+  .diagram-wrap { display: flex; justify-content: center; margin: 6px 0 12px; }
+  .diagram { position: relative; width: min(260px, 70vw); aspect-ratio: 1 / 2; touch-action: manipulation; cursor: crosshair; }
+  .diagram svg { width: 100%; height: 100%; display: block; }
+  .dlabel { position: absolute; font-size: 12px; font-weight: 700; color: var(--gold-2); white-space: nowrap; pointer-events: none; }
+  .dlabel.f { top: -4px; left: 50%; transform: translate(-50%, -100%); }
+  .dlabel.b { bottom: -4px; left: 50%; transform: translate(-50%, 100%); }
+  .dlabel.r { right: -6px; top: 50%; transform: translate(100%, -50%); }
+  .dlabel.l { left: -6px; top: 50%; transform: translate(-100%, -50%); }
+  .marker {
+    position: absolute; width: 28px; height: 28px; margin: -14px 0 0 -14px; border-radius: 50%;
+    background: var(--danger); color: #fff; font: 800 13px var(--font); display: grid; place-items: center;
+    border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,.5); cursor: pointer;
+  }
+  .dlist { display: grid; gap: 8px; margin-bottom: 12px; }
+  .ditem {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius);
+    background: var(--bg-2); border: 1px solid var(--line-strong); cursor: pointer; font-size: 14px;
+  }
+  .ditem .marker { position: static; margin: 0; flex: none; }
+  .ditem .tx { flex: 1; min-width: 0; }
+  .ditem .tx small { display: block; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ditem img { width: 44px; height: 44px; object-fit: cover; border-radius: 8px; }
+  .check {
+    display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: var(--radius);
+    border: 1px solid var(--line-strong); background: var(--bg-2); font-size: 14px; line-height: 1.6; cursor: pointer;
+  }
+  .check input { width: 22px; height: 22px; flex: none; margin: 2px 0 0; accent-color: var(--gold); -webkit-appearance: auto; appearance: auto; }
+
+  /* signatures */
+  .sig { position: relative; border-radius: var(--radius); border: 1px solid var(--line-strong); background: #f7f7f2; overflow: hidden; }
+  .sig canvas { display: block; width: 100%; height: 180px; touch-action: none; }
+  .sig .clr { position: absolute; top: 8px; inset-inline-end: 8px; background: #fff; color: #333; border-color: #ccc; }
+  .sig .ph { position: absolute; inset: 0; display: grid; place-items: center; color: #9a9a90; font-size: 14px; pointer-events: none; }
+
+  /* summary */
+  .sum { display: grid; gap: 6px; font-size: 14px; margin-bottom: 14px; }
+  .sum div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .sum span { color: var(--muted); }
+  .preview { width: 100%; border-radius: var(--radius); border: 1px solid var(--line); margin: 6px 0 14px; display: block; }
+
+  .btn {
+    width: 100%; border: 0; border-radius: var(--radius); padding: 15px 18px; cursor: pointer;
+    font: 800 16px var(--font); display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: linear-gradient(135deg, var(--gold-2), var(--gold)); color: #1a1406;
+  }
+  .btn.sec { background: var(--bg-2); color: var(--text); border: 1px solid var(--line-strong); font-weight: 700; }
+  .btn.wa { background: #25d366; color: #052e16; }
+  .btn[disabled] { opacity: .55; cursor: wait; }
+  .stack { display: grid; gap: 10px; }
+
+  .bar {
+    position: fixed; inset: auto 0 0 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: rgba(11, 13, 18, .94); border-top: 1px solid var(--line); backdrop-filter: blur(10px); z-index: 5;
+  }
+  .bar .in { max-width: 640px; margin: 0 auto; display: flex; gap: 10px; }
+  .bar .btn.sec { flex: 0 0 34%; }
+  .err { color: var(--danger); font-size: 13.5px; margin: 10px 0 0; min-height: 1em; }
+
+  /* bottom sheet */
+  .sheet-bg { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 10; display: none; }
+  .sheet-bg.open { display: block; }
+  .sheet {
+    position: fixed; inset: auto 0 0 0; z-index: 11; background: var(--bg-2); border-top: 1px solid var(--line-strong);
+    border-radius: 20px 20px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+    max-width: 640px; margin: 0 auto; transform: translateY(105%); transition: transform .2s;
+  }
+  .sheet.open { transform: none; }
+  .sheet h3 { margin: 0 0 12px; display: flex; align-items: center; gap: 10px; font-size: 17px; }
+  .sheet h3 .marker { position: static; margin: 0; }
+  .sheet .row { display: flex; gap: 10px; margin-top: 12px; }
+  .sheet .row .btn { flex: 1; }
+  .btn.del { background: transparent; color: var(--danger); border: 1px solid rgba(255,107,107,.4); }
+  .dphoto { width: 100%; max-height: 180px; object-fit: cover; border-radius: var(--radius); margin-top: 12px; display: none; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); z-index: 20;
+    background: #222836; border: 1px solid var(--line-strong); padding: 10px 16px; border-radius: 12px;
+    font-size: 14px; max-width: calc(100% - 32px); display: none;
+  }
+  .toast.show { display: block; }
+  [hidden] { display: none !important; }
+  .busy { position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 30; display: none; place-items: center; font-weight: 700; }
+  .busy.show { display: grid; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">RD</div>
+      <div><b>R Dynamic Plus</b><small data-t="appSub">فحص السيارة 360°</small></div>
+    </div>
+    <div class="hbtns">
+      <button class="pill" id="newBtn" type="button" data-t="newBtn">فحص جديد</button>
+      <button class="pill" id="langBtn" type="button">English</button>
+    </div>
+  </header>
+
+  <div class="steps" id="steps"></div>
+
+  <!-- STEP 1: info -->
+  <section class="card" data-step="0">
+    <h2 data-t="s1h">بيانات الفحص</h2>
+    <p class="lead" data-t="s1p">عبّي البيانات قبل ما تبلّش. الفحص بيصير والزبون واقف معك.</p>
+    <div class="grid">
+      <div class="field">
+        <label data-t="type">نوع الفحص <span class="req">*</span></label>
+        <div class="chips big">
+          <label class="chip"><input type="radio" name="type" value="delivery"><span data-t="delivery">تسليم للزبون</span></label>
+          <label class="chip"><input type="radio" name="type" value="return"><span data-t="return">استلام من الزبون</span></label>
+        </div>
+      </div>
+      <div class="grid two">
+        <div class="field"><label><span data-t="plate">رقم اللوحة</span> <span class="req">*</span></label><input id="plate" class="ltr" autocomplete="off" placeholder="Dubai A 12345"></div>
+        <div class="field"><label data-t="car">موديل السيارة</label><input id="car" autocomplete="off" placeholder="Nissan Patrol 2025"></div>
+      </div>
+      <div class="grid two">
+        <div class="field"><label><span data-t="customer">اسم الزبون</span> <span class="req">*</span></label><input id="customer" autocomplete="off"></div>
+        <div class="field">
+          <label><span data-t="phone">واتساب الزبون</span> <span class="req">*</span></label>
+          <div class="phone"><input id="cc" inputmode="numeric" value="+971"><input id="phone" inputmode="numeric" placeholder="50 123 4567"></div>
+        </div>
+      </div>
+      <div class="grid two">
+        <div class="field"><label data-t="ref">رقم الحجز / العقد</label><input id="ref" class="ltr" autocomplete="off"></div>
+        <div class="field"><label><span data-t="driver">اسم السائق</span> <span class="req">*</span></label><input id="driver" autocomplete="off"></div>
+      </div>
+      <div class="field"><label data-t="location">مكان التسليم</label><input id="location" autocomplete="off"></div>
+      <div class="field"><label><span data-t="km">قراءة العداد (كم)</span> <span class="req">*</span></label><input id="km" class="ltr" inputmode="numeric" placeholder="25430"></div>
+      <div class="field">
+        <label><span data-t="fuel">مستوى البنزين</span> <span class="req">*</span></label>
+        <div class="chips" id="fuelChips"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2: photos -->
+  <section class="card" data-step="1" hidden>
+    <h2 data-t="s2h">صور 360 درجة</h2>
+    <p class="lead" data-t="s2p">لف حول السيارة مع الزبون بالترتيب. كل صورة بتنطبع عليها اللوحة والتاريخ والوقت تلقائياً.</p>
+    <p class="counter" id="shotCount"></p>
+    <div class="shots" id="shots"></div>
+    <div class="video">
+      <div class="t"><b data-t="video">فيديو لفّة كاملة (اختياري، منصوح فيه)</b><small id="videoInfo" data-t="videoHint">فيديو متواصل بدون قطع، والزبون يحكي إنه شاف السيارة</small></div>
+      <button class="pill" id="videoBtn" type="button" data-t="record">صوّر</button>
+    </div>
+  </section>
+
+  <!-- STEP 3: damage -->
+  <section class="card" data-step="2" hidden>
+    <h2 data-t="s3h">الخدوش والأضرار</h2>
+    <p class="lead" data-t="s3p">اكبس على مكان الضرر بالرسمة، وصوّره من قريب. وَرجيه للزبون قبل ما تسجله.</p>
+    <div class="diagram-wrap">
+      <div class="diagram" id="diagram">
+        <svg viewBox="0 0 200 400" aria-hidden="true" id="carSvg">
+          <rect x="16" y="70" width="18" height="54" rx="6" fill="#3a4152"/>
+          <rect x="166" y="70" width="18" height="54" rx="6" fill="#3a4152"/>
+          <rect x="16" y="282" width="18" height="54" rx="6" fill="#3a4152"/>
+          <rect x="166" y="282" width="18" height="54" rx="6" fill="#3a4152"/>
+          <ellipse cx="24" cy="160" rx="9" ry="6" fill="#2a3040" stroke="#d6b25e" stroke-opacity=".5"/>
+          <ellipse cx="176" cy="160" rx="9" ry="6" fill="#2a3040" stroke="#d6b25e" stroke-opacity=".5"/>
+          <rect x="30" y="16" width="140" height="368" rx="50" fill="#1d2232" stroke="#d6b25e" stroke-opacity=".6" stroke-width="2"/>
+          <rect x="44" y="24" width="30" height="9" rx="4" fill="#f1d58c" fill-opacity=".7"/>
+          <rect x="126" y="24" width="30" height="9" rx="4" fill="#f1d58c" fill-opacity=".7"/>
+          <rect x="44" y="368" width="30" height="8" rx="4" fill="#ff6b6b" fill-opacity=".7"/>
+          <rect x="126" y="368" width="30" height="8" rx="4" fill="#ff6b6b" fill-opacity=".7"/>
+          <path d="M48 118 Q100 102 152 118" fill="none" stroke="#ffffff" stroke-opacity=".15" stroke-width="2"/>
+          <path d="M50 128 Q100 112 150 128 L142 170 Q100 160 58 170 Z" fill="#33445f"/>
+          <rect x="58" y="176" width="84" height="112" rx="12" fill="#171b28" stroke="#ffffff" stroke-opacity=".12"/>
+          <path d="M58 294 Q100 304 142 294 L150 330 Q100 344 50 330 Z" fill="#33445f"/>
+          <line x1="40" y1="232" x2="56" y2="232" stroke="#ffffff" stroke-opacity=".15" stroke-width="2"/>
+          <line x1="144" y1="232" x2="160" y2="232" stroke="#ffffff" stroke-opacity=".15" stroke-width="2"/>
+        </svg>
+        <span class="dlabel f" data-t="dFront">الأمام</span>
+        <span class="dlabel b" data-t="dRear">الخلف</span>
+        <span class="dlabel r" data-t="dRight">يمين</span>
+        <span class="dlabel l" data-t="dLeft">يسار</span>
+        <div id="markers"></div>
+      </div>
+    </div>
+    <div style="height:14px"></div>
+    <div class="dlist" id="dlist"></div>
+    <label class="check" id="noDmgWrap"><input type="checkbox" id="noDamage"><span data-t="noDamage">فحصنا السيارة كاملة وما في أي خدش أو ضرر</span></label>
+    <div class="field" style="margin-top:14px"><label data-t="notes">ملاحظات إضافية</label><textarea id="notes"></textarea></div>
+  </section>
+
+  <!-- STEP 4: signatures -->
+  <section class="card" data-step="3" hidden>
+    <h2 data-t="s4h">موافقة الزبون</h2>
+    <p class="lead" data-t="s4p">أعطِ الموبايل للزبون: يراجع الصور والأضرار، يوافق ويوقّع.</p>
+    <div class="sum" id="miniSum"></div>
+    <label class="check"><input type="checkbox" id="agree"><span id="agreeText"></span></label>
+    <div class="field" style="margin-top:14px">
+      <label><span data-t="sigCustomer">توقيع الزبون</span> <span class="req">*</span></label>
+      <div class="sig" id="sigCustomerBox"><canvas id="sigCustomer"></canvas><div class="ph" data-t="signHere">وقّع هون بإصبعك</div><button class="pill clr" type="button" data-t="clear">مسح</button></div>
+    </div>
+    <div class="field" style="margin-top:14px">
+      <label data-t="sigDriver">توقيع السائق</label>
+      <div class="sig" id="sigDriverBox"><canvas id="sigDriver"></canvas><div class="ph" data-t="signHere">وقّع هون بإصبعك</div><button class="pill clr" type="button" data-t="clear">مسح</button></div>
+    </div>
+  </section>
+
+  <!-- STEP 5: report -->
+  <section class="card" data-step="4" hidden>
+    <h2 data-t="s5h">التقرير جاهز</h2>
+    <p class="lead" data-t="s5p">ابعت التقرير للزبون على واتساب، وابعت نسخة لمجموعة الشركة. هيك صار عند الطرفين نفس الدليل.</p>
+    <img class="preview" id="preview" alt="">
+    <div class="stack">
+      <button class="btn" id="shareBtn" type="button" data-t="share">مشاركة التقرير (واتساب…)</button>
+      <button class="btn wa" id="waBtn" type="button" data-t="waCustomer">رسالة واتساب للزبون</button>
+      <button class="btn sec" id="waCompanyBtn" type="button" data-t="waCompany">رسالة واتساب للشركة</button>
+      <button class="btn sec" id="dlBtn" type="button" data-t="download">تنزيل التقرير على الموبايل</button>
+    </div>
+    <p class="lead" style="margin-top:14px;font-size:13px" data-t="s5note">على بعض الموبايلات واتساب ما بيقبل صورة ونص مع بعض: إذا ما وصل النص، ابعت "رسالة واتساب للزبون" بعد الصورة.</p>
+  </section>
+
+  <p class="err" id="err"></p>
+</div>
+
+<div class="bar">
+  <div class="in">
+    <button class="btn sec" id="backBtn" type="button" data-t="back">رجوع</button>
+    <button class="btn" id="nextBtn" type="button" data-t="next">التالي</button>
+  </div>
+</div>
+
+<div class="sheet-bg" id="sheetBg"></div>
+<div class="sheet" id="sheet">
+  <h3><span class="marker" id="sheetNum">1</span><span data-t="dmgTitle">نوع الضرر</span></h3>
+  <div class="chips" id="kindChips"></div>
+  <div class="field" style="margin-top:12px"><input id="dmgNote" data-tp="dmgNotePh" placeholder="مثلاً: خدش 5 سم على الباب الخلفي"></div>
+  <img class="dphoto" id="dmgPhoto" alt="">
+  <div class="row">
+    <button class="btn sec" id="dmgPhotoBtn" type="button" data-t="dmgPhotoBtn">📷 صورة من قريب</button>
+  </div>
+  <div class="row">
+    <button class="btn del" id="dmgDel" type="button" data-t="delete">حذف</button>
+    <button class="btn" id="dmgSave" type="button" data-t="save">تم</button>
+  </div>
+</div>
+
+<input type="file" id="camInput" accept="image/*" capture="environment" hidden>
+<input type="file" id="vidInput" accept="video/*" capture="environment" hidden>
+<div class="toast" id="toast"></div>
+<div class="busy" id="busy"><span data-t="working">جاري التجهيز…</span></div>
+
+<script>
+/* ================== CONFIG ================== */
+const CONFIG = {
+  COMPANY_NAME: "R Dynamic Plus Car Rental",
+  // Company WhatsApp (digits only, international format) for the internal copy.
+  COMPANY_WHATSAPP: "971525228428",
+  // Reject photos picked from the gallery that are older than this (minutes).
+  MAX_PHOTO_AGE_MIN: 15,
+};
+
+/* ================== i18n ================== */
+const T = {
+  ar: {
+    appSub: "فحص السيارة 360°", newBtn: "فحص جديد",
+    stepNames: ["البيانات", "الصور", "الأضرار", "التوقيع", "التقرير"],
+    s1h: "بيانات الفحص", s1p: "عبّي البيانات قبل ما تبلّش. الفحص بيصير والزبون واقف معك.",
+    type: "نوع الفحص", delivery: "تسليم للزبون", return: "استلام من الزبون",
+    plate: "رقم اللوحة", car: "موديل السيارة", customer: "اسم الزبون", phone: "واتساب الزبون",
+    ref: "رقم الحجز / العقد", driver: "اسم السائق", location: "مكان التسليم",
+    km: "قراءة العداد (كم)", fuel: "مستوى البنزين",
+    fuelLevels: ["فاضي", "¼", "½", "¾", "فل"],
+    s2h: "صور 360 درجة", s2p: "لف حول السيارة مع الزبون بالترتيب. كل صورة بتنطبع عليها اللوحة والتاريخ والوقت تلقائياً.",
+    shotsDone: (a, b) => `تم <b>${a}</b> من <b>${b}</b> صور`,
+    angles: ["الأمام", "الزاوية الأمامية اليمنى", "الجانب الأيمن", "الزاوية الخلفية اليمنى", "الخلف", "الزاوية الخلفية اليسرى", "الجانب الأيسر", "الزاوية الأمامية اليسرى", "العداد والبنزين (المحرك شغّال)", "المقاعد والمقصورة", "صندوق السيارة"],
+    video: "فيديو لفّة كاملة (اختياري، منصوح فيه)", videoHint: "فيديو متواصل بدون قطع، والزبون يحكي إنه شاف السيارة",
+    record: "صوّر", rerecord: "إعادة", videoSaved: (mb, s) => `تم حفظ الفيديو · ${mb} MB${s ? " · " + s + " ث" : ""}`,
+    s3h: "الخدوش والأضرار", s3p: "اكبس على مكان الضرر بالرسمة، وصوّره من قريب. وَرجيه للزبون قبل ما تسجله.",
+    dFront: "الأمام", dRear: "الخلف", dRight: "يمين", dLeft: "يسار",
+    noDamage: "فحصنا السيارة كاملة وما في أي خدش أو ضرر", notes: "ملاحظات إضافية",
+    dmgTitle: "نوع الضرر", dmgNotePh: "مثلاً: خدش 5 سم على الباب الخلفي", dmgPhotoBtn: "📷 صورة من قريب", dmgPhotoRetake: "📷 إعادة الصورة",
+    kinds: { scratch: "خدش", dent: "طعجة / ضربة", crack: "كسر / شرخ", rim: "جنط", glass: "زجاج", other: "غير" },
+    delete: "حذف", save: "تم",
+    s4h: "موافقة الزبون", s4p: "أعطِ الموبايل للزبون: يراجع الصور والأضرار، يوافق ويوقّع.",
+    agreeDelivery: "استلمت السيارة وشفتها كاملة مع السائق، وحالتها مثل ما هي مسجّلة بهالتقرير والصور.",
+    agreeReturn: "سلّمت السيارة وشفتها كاملة مع السائق، وحالتها مثل ما هي مسجّلة بهالتقرير والصور.",
+    sigCustomer: "توقيع الزبون", sigDriver: "توقيع السائق", signHere: "وقّع هون بإصبعك", clear: "مسح",
+    s5h: "التقرير جاهز", s5p: "ابعت التقرير للزبون على واتساب، وابعت نسخة لمجموعة الشركة. هيك صار عند الطرفين نفس الدليل.",
+    share: "مشاركة التقرير (واتساب…)", waCustomer: "رسالة واتساب للزبون", waCompany: "رسالة واتساب للشركة", download: "تنزيل التقرير على الموبايل",
+    s5note: "على بعض الموبايلات واتساب ما بيقبل صورة ونص مع بعض: إذا ما وصل النص، ابعت \"رسالة واتساب للزبون\" بعد الصورة.",
+    back: "رجوع", next: "التالي", finish: "إنهاء وإنشاء التقرير", working: "جاري التجهيز…",
+    sumType: "النوع", sumCar: "السيارة", sumKm: "العداد", sumFuel: "البنزين", sumPhotos: "الصور", sumDamage: "الأضرار", none: "لا يوجد",
+    errRequired: "عبّي كل الخانات المطلوبة (*).", errPhone: "رقم الواتساب مش صحيح.",
+    errShots: (n) => `ناقص ${n} صور. لازم تصوّر كل الزوايا.`,
+    errDamage: "سجّل الأضرار على الرسمة، أو أكّد إنه ما في أي ضرر.",
+    errDmgPhoto: (n) => `الضرر رقم ${n} ما إله صورة من قريب.`,
+    errAgree: "الزبون لازم يوافق ويوقّع.", errOld: "هاي صورة قديمة من المعرض. صوّر هلّق بالكاميرا.",
+    errFile: "ما قدرنا نقرأ الملف، جرّب مرة ثانية.",
+    confirmNew: "بدك تمسح الفحص الحالي وتبلّش فحص جديد؟",
+    shared: "تمت المشاركة", downloaded: "تم التنزيل",
+    // report
+    rTitleDelivery: "تقرير فحص تسليم السيارة", rTitleReturn: "تقرير فحص استلام السيارة",
+    rNo: "رقم التقرير", rDate: "التاريخ", rDuration: "مدة الفحص", rMin: "دقيقة",
+    rLocation: "المكان", rRef: "رقم الحجز", rDriver: "السائق", rCustomer: "الزبون", rPhone: "الهاتف",
+    rDiagram: "خريطة الأضرار", rPhotos: "صور الفحص", rClose: "صور الأضرار من قريب", rNotes: "ملاحظات",
+    rNoDamage: "✓ لا يوجد أي خدش أو ضرر (بتأكيد الطرفين)", rVideo: "تم تصوير فيديو 360° للسيارة ومشاركته مع التقرير",
+    rFooter: "تم إنشاء هذا التقرير على موبايل السائق لحظة الفحص. الوقت والتاريخ مطبوعين على كل صورة.",
+    msg: (d) => `مرحبا ${d.customer} 👋\nهاد ملخص ${d.typeName} السيارة من ${CONFIG.COMPANY_NAME}:\n\n🚗 ${d.car} · ${d.plate}\n📅 ${d.date}\n🛣️ العداد: ${d.km} كم\n⛽ البنزين: ${d.fuel}\n🔍 الأضرار: ${d.damage}\n🧾 رقم التقرير: ${d.id}\n\nتقرير الفحص بالصور مرفق. شكراً إلك 🙏`,
+    typeNameDelivery: "تسليم", typeNameReturn: "استلام",
+  },
+  en: {
+    appSub: "360° vehicle inspection", newBtn: "New",
+    stepNames: ["Details", "Photos", "Damage", "Sign", "Report"],
+    s1h: "Inspection details", s1p: "Fill this in before you start. Do the inspection with the customer standing next to you.",
+    type: "Inspection type", delivery: "Delivery to customer", return: "Return from customer",
+    plate: "Plate number", car: "Car model", customer: "Customer name", phone: "Customer WhatsApp",
+    ref: "Booking / contract no.", driver: "Driver name", location: "Location",
+    km: "Odometer (km)", fuel: "Fuel level",
+    fuelLevels: ["Empty", "¼", "½", "¾", "Full"],
+    s2h: "360° photos", s2p: "Walk around the car with the customer, in order. Each photo is stamped with the plate, date and time.",
+    shotsDone: (a, b) => `<b>${a}</b> of <b>${b}</b> photos done`,
+    angles: ["Front", "Front-right corner", "Right side", "Rear-right corner", "Rear", "Rear-left corner", "Left side", "Front-left corner", "Dashboard: km & fuel (engine on)", "Seats & interior", "Trunk"],
+    video: "Full walk-around video (optional, recommended)", videoHint: "One continuous video, with the customer saying they saw the car",
+    record: "Record", rerecord: "Redo", videoSaved: (mb, s) => `Video saved · ${mb} MB${s ? " · " + s + "s" : ""}`,
+    s3h: "Scratches & damage", s3p: "Tap where the damage is on the drawing and take a close-up. Show it to the customer before you log it.",
+    dFront: "Front", dRear: "Rear", dRight: "Right", dLeft: "Left",
+    noDamage: "We checked the whole car and there is no scratch or damage", notes: "Extra notes",
+    dmgTitle: "Damage type", dmgNotePh: "e.g. 5 cm scratch on rear door", dmgPhotoBtn: "📷 Close-up photo", dmgPhotoRetake: "📷 Retake photo",
+    kinds: { scratch: "Scratch", dent: "Dent", crack: "Crack / broken", rim: "Rim", glass: "Glass", other: "Other" },
+    delete: "Delete", save: "Done",
+    s4h: "Customer confirmation", s4p: "Hand the phone to the customer to review the photos and damage, agree and sign.",
+    agreeDelivery: "I received the car, checked it fully with the driver, and its condition is as recorded in this report and photos.",
+    agreeReturn: "I returned the car, checked it fully with the driver, and its condition is as recorded in this report and photos.",
+    sigCustomer: "Customer signature", sigDriver: "Driver signature", signHere: "Sign here with your finger", clear: "Clear",
+    s5h: "Report ready", s5p: "Send the report to the customer on WhatsApp and a copy to the company group, so both sides hold the same evidence.",
+    share: "Share report (WhatsApp…)", waCustomer: "WhatsApp message to customer", waCompany: "WhatsApp message to company", download: "Download report",
+    s5note: "Some phones drop the text when sharing an image to WhatsApp. If it's missing, send \"WhatsApp message to customer\" after the image.",
+    back: "Back", next: "Next", finish: "Finish & create report", working: "Preparing…",
+    sumType: "Type", sumCar: "Car", sumKm: "Odometer", sumFuel: "Fuel", sumPhotos: "Photos", sumDamage: "Damage", none: "None",
+    errRequired: "Fill in all required fields (*).", errPhone: "The WhatsApp number is not valid.",
+    errShots: (n) => `${n} photos missing. Every angle is required.`,
+    errDamage: "Mark the damage on the drawing, or confirm there is none.",
+    errDmgPhoto: (n) => `Damage #${n} has no close-up photo.`,
+    errAgree: "The customer must agree and sign.", errOld: "That's an old gallery photo. Take it now with the camera.",
+    errFile: "Couldn't read the file, try again.",
+    confirmNew: "Clear this inspection and start a new one?",
+    shared: "Shared", downloaded: "Downloaded",
+    rTitleDelivery: "Vehicle Delivery Inspection", rTitleReturn: "Vehicle Return Inspection",
+    rNo: "Report no.", rDate: "Date", rDuration: "Duration", rMin: "min",
+    rLocation: "Location", rRef: "Booking", rDriver: "Driver", rCustomer: "Customer", rPhone: "Phone",
+    rDiagram: "Damage map", rPhotos: "Inspection photos", rClose: "Damage close-ups", rNotes: "Notes",
+    rNoDamage: "✓ No scratches or damage (confirmed by both sides)", rVideo: "A 360° video of the car was recorded and shared with this report",
+    rFooter: "Created on the driver's phone at the time of inspection. Date and time are stamped on every photo.",
+    msg: (d) => `Hi ${d.customer} 👋\nHere is the ${d.typeName} inspection summary from ${CONFIG.COMPANY_NAME}:\n\n🚗 ${d.car} · ${d.plate}\n📅 ${d.date}\n🛣️ Odometer: ${d.km} km\n⛽ Fuel: ${d.fuel}\n🔍 Damage: ${d.damage}\n🧾 Report no.: ${d.id}\n\nThe photo report is attached. Thank you 🙏`,
+    typeNameDelivery: "delivery", typeNameReturn: "return",
+  },
+};
+const KIND_KEYS = ["scratch", "dent", "crack", "rim", "glass", "other"];
+const ANGLE_IDS = ["front", "fr", "right", "rr", "rear", "rl", "left", "fl", "dash", "interior", "trunk"];
+const FIELDS = ["plate", "car", "customer", "cc", "phone", "ref", "driver", "location", "km", "notes"];
+
+/* ================== storage (IndexedDB for blobs, localStorage for state) ================== */
+const STATE_KEY = "rdp_inspection_v1";
+const idb = {
+  db: null,
+  open() {
+    if (this.db) return Promise.resolve(this.db);
+    return new Promise((res, rej) => {
+      const r = indexedDB.open("rdp_inspection", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("blobs");
+      r.onsuccess = () => { this.db = r.result; res(this.db); };
+      r.onerror = () => rej(r.error);
+    });
+  },
+  async run(mode, fn) {
+    try {
+      const db = await this.open();
+      return await new Promise((res, rej) => {
+        const tx = db.transaction("blobs", mode);
+        const req = fn(tx.objectStore("blobs"));
+        tx.oncomplete = () => res(req && req.result);
+        tx.onerror = () => rej(tx.error);
+      });
+    } catch (e) { console.warn("idb", e); return undefined; }
+  },
+  put(k, v) { return this.run("readwrite", (s) => s.put(v, k)); },
+  get(k) { return this.run("readonly", (s) => s.get(k)); },
+  del(k) { return this.run("readwrite", (s) => s.delete(k)); },
+  clear() { return this.run("readwrite", (s) => s.clear()); },
+};
+
+function freshState() {
+  return {
+    lang: (state && state.lang) || "ar", step: 0, type: "", fuel: "",
+    f: { cc: "+971" }, photos: {}, damages: [], noDamage: false, agree: false,
+    video: null, startedAt: null, finishedAt: null, reportId: "",
+  };
+}
+let state = null;
+state = freshState();
+const blobs = new Map(); // key -> Blob
+const urls = new Map();  // key -> objectURL
+
+function save() {
+  try { localStorage.setItem(STATE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+async function setBlob(key, blob) {
+  blobs.set(key, blob);
+  if (urls.has(key)) URL.revokeObjectURL(urls.get(key));
+  urls.set(key, URL.createObjectURL(blob));
+  await idb.put(key, blob);
+}
+async function delBlob(key) {
+  blobs.delete(key);
+  if (urls.has(key)) { URL.revokeObjectURL(urls.get(key)); urls.delete(key); }
+  await idb.del(key);
+}
+
+/* ================== helpers ================== */
+const $ = (id) => document.getElementById(id);
+const t = (k) => T[state.lang][k];
+const pad = (n) => String(n).padStart(2, "0");
+const fmtDate = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function toast(msg) { const el = $("toast"); el.textContent = msg; el.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove("show"), 2600); }
+function busy(on) { $("busy").classList.toggle("show", on); }
+function loadImg(src) { return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; }); }
+function canvasBlob(c, q = 0.82) { return new Promise((res) => c.toBlob(res, "image/jpeg", q)); }
+function digits(s) { return String(s || "").replace(/\D/g, ""); }
+function fullPhone() { return digits(state.f.cc) + digits(state.f.phone).replace(/^0+/, ""); }
+function fuelName() { return state.fuel === "" ? "" : t("fuelLevels")[+state.fuel]; }
+
+/* ================== camera ================== */
+let camTarget = null; // {kind:'angle', id} | {kind:'dmg', id}
+function openCamera(target) { camTarget = target; const i = $("camInput"); i.value = ""; i.click(); }
+
+async function stampPhoto(file, label) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await loadImg(url);
+    const max = 1600, s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.round(img.naturalWidth * s), h = Math.round(img.naturalHeight * s);
+    const c = document.createElement("canvas"); c.width = w; c.height = h;
+    const x = c.getContext("2d");
+    x.drawImage(img, 0, 0, w, h);
+    const bh = Math.max(34, Math.round(Math.min(w, h) * 0.06));
+    x.fillStyle = "rgba(0,0,0,.62)"; x.fillRect(0, h - bh, w, bh);
+    x.fillStyle = "#fff"; x.font = `700 ${Math.round(bh * 0.46)}px Cairo, Inter, sans-serif`;
+    x.textBaseline = "middle";
+    x.direction = "ltr"; x.textAlign = "left";
+    x.fillText(`${state.f.plate || ""}  ·  ${fmtDate(Date.now())}`, bh * 0.4, h - bh / 2);
+    x.direction = state.lang === "ar" ? "rtl" : "ltr"; x.textAlign = "right";
+    x.fillText(label, w - bh * 0.4, h - bh / 2);
+    return await canvasBlob(c);
+  } finally { URL.revokeObjectURL(url); }
+}
+
+$("camInput").addEventListener("change", async (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file || !camTarget) return;
+  if (file.lastModified && Date.now() - file.lastModified > CONFIG.MAX_PHOTO_AGE_MIN * 60000) { toast(t("errOld")); return; }
+  const target = camTarget;
+  busy(true);
+  try {
+    if (target.kind === "angle") {
+      const idx = ANGLE_IDS.indexOf(target.id);
+      const blob = await stampPhoto(file, `${idx + 1}. ${t("angles")[idx]}`);
+      await setBlob("p:" + target.id, blob);
+      state.photos[target.id] = Date.now();
+      if (!state.startedAt) state.startedAt = Date.now();
+      renderShots();
+    } else {
+      const d = state.damages.find((x) => x.id === target.id);
+      const n = state.damages.indexOf(d) + 1;
+      const blob = await stampPhoto(file, `#${n} ${t("kinds")[d.kind] || ""}`);
+      await setBlob("d:" + d.id, blob);
+      d.photo = Date.now();
+      renderSheetPhoto(d); renderDamage();
+    }
+    save();
+  } catch (err) { console.error(err); toast(t("errFile")); }
+  finally { busy(false); }
+});
+
+$("videoBtn").addEventListener("click", () => { const i = $("vidInput"); i.value = ""; i.click(); });
+$("vidInput").addEventListener("change", async (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  busy(true);
+  let secs = 0;
+  try {
+    const v = document.createElement("video"); v.preload = "metadata";
+    const u = URL.createObjectURL(file); v.src = u;
+    secs = await new Promise((r) => { v.onloadedmetadata = () => r(Math.round(v.duration) || 0); v.onerror = () => r(0); setTimeout(() => r(0), 3000); });
+    URL.revokeObjectURL(u);
+  } catch (e) {}
+  await setBlob("video", file);
+  state.video = { name: file.name || "video.mp4", type: file.type || "video/mp4", size: file.size, secs, at: Date.now() };
+  if (!state.startedAt) state.startedAt = Date.now();
+  save(); renderVideo(); busy(false);
+});
+
+/* ================== render ================== */
+function renderSteps() {
+  $("steps").innerHTML = t("stepNames").map((n, i) => `<div class="${i < state.step ? "done" : i === state.step ? "on" : ""}">${n}</div>`).join("");
+  document.querySelectorAll("[data-step]").forEach((s) => (s.hidden = +s.dataset.step !== state.step));
+  $("backBtn").hidden = state.step === 0;
+  $("nextBtn").hidden = state.step === 4;
+  $("nextBtn").textContent = state.step === 3 ? t("finish") : t("next");
+  $("err").textContent = "";
+}
+
+function renderShots() {
+  const done = ANGLE_IDS.filter((id) => blobs.has("p:" + id)).length;
+  $("shotCount").innerHTML = t("shotsDone")(done, ANGLE_IDS.length);
+  $("shots").innerHTML = ANGLE_IDS.map((id, i) => {
+    const has = blobs.has("p:" + id);
+    return has
+      ? `<div class="shot has" data-id="${id}"><img src="${urls.get("p:" + id)}" alt=""><span class="ok">✓</span><span class="cap">${i + 1}. ${esc(t("angles")[i])}</span></div>`
+      : `<div class="shot" data-id="${id}"><span class="n">${i + 1}</span>📷<span>${esc(t("angles")[i])}</span></div>`;
+  }).join("");
+}
+$("shots").addEventListener("click", (e) => { const s = e.target.closest(".shot"); if (s) openCamera({ kind: "angle", id: s.dataset.id }); });
+
+function renderVideo() {
+  const v = state.video;
+  if (v && blobs.has("video")) {
+    $("videoInfo").textContent = t("videoSaved")((v.size / 1048576).toFixed(1), v.secs);
+    $("videoBtn").textContent = t("rerecord");
+  } else {
+    $("videoInfo").textContent = t("videoHint");
+    $("videoBtn").textContent = t("record");
+  }
+}
+
+function renderFuel() {
+  $("fuelChips").innerHTML = t("fuelLevels").map((n, i) =>
+    `<label class="chip"><input type="radio" name="fuel" value="${i}" ${String(state.fuel) === String(i) ? "checked" : ""}><span>${n}</span></label>`).join("");
+}
+$("fuelChips").addEventListener("change", (e) => { state.fuel = e.target.value; save(); });
+document.querySelectorAll('input[name="type"]').forEach((r) => r.addEventListener("change", () => { state.type = r.value; save(); renderAgree(); }));
+
+function renderDamage() {
+  $("markers").innerHTML = state.damages.map((d, i) =>
+    `<span class="marker" data-id="${d.id}" style="left:${d.x}%;top:${d.y}%">${i + 1}</span>`).join("");
+  $("dlist").innerHTML = state.damages.map((d, i) => `
+    <div class="ditem" data-id="${d.id}">
+      <span class="marker">${i + 1}</span>
+      <div class="tx"><b>${esc(t("kinds")[d.kind] || "")}</b><small>${esc(d.note || "")}</small></div>
+      ${blobs.has("d:" + d.id) ? `<img src="${urls.get("d:" + d.id)}" alt="">` : `<span style="color:var(--danger);font-size:20px">📷</span>`}
+    </div>`).join("");
+  const nd = $("noDamage");
+  nd.disabled = state.damages.length > 0;
+  if (state.damages.length) { nd.checked = false; state.noDamage = false; }
+  $("noDmgWrap").style.opacity = state.damages.length ? .45 : 1;
+}
+
+$("diagram").addEventListener("click", (e) => {
+  const m = e.target.closest(".marker");
+  if (m) { openSheet(m.dataset.id); return; }
+  const r = $("diagram").getBoundingClientRect();
+  const x = ((e.clientX - r.left) / r.width) * 100, y = ((e.clientY - r.top) / r.height) * 100;
+  if (x < 0 || x > 100 || y < 0 || y > 100) return;
+  const d = { id: "d" + Date.now().toString(36), x: +x.toFixed(1), y: +y.toFixed(1), kind: "scratch", note: "", photo: null };
+  state.damages.push(d);
+  if (!state.startedAt) state.startedAt = Date.now();
+  save(); renderDamage(); openSheet(d.id, true);
+});
+$("dlist").addEventListener("click", (e) => { const it = e.target.closest(".ditem"); if (it) openSheet(it.dataset.id); });
+$("noDamage").addEventListener("change", (e) => { state.noDamage = e.target.checked; save(); });
+
+/* damage sheet */
+let sheetId = null;
+function openSheet(id, isNew) {
+  const d = state.damages.find((x) => x.id === id); if (!d) return;
+  sheetId = id;
+  $("sheetNum").textContent = state.damages.indexOf(d) + 1;
+  $("kindChips").innerHTML = KIND_KEYS.map((k) =>
+    `<label class="chip"><input type="radio" name="kind" value="${k}" ${d.kind === k ? "checked" : ""}><span>${t("kinds")[k]}</span></label>`).join("");
+  $("dmgNote").value = d.note || "";
+  renderSheetPhoto(d);
+  $("sheet").classList.add("open"); $("sheetBg").classList.add("open");
+}
+function renderSheetPhoto(d) {
+  const has = blobs.has("d:" + d.id), img = $("dmgPhoto");
+  img.style.display = has ? "block" : "none";
+  if (has) img.src = urls.get("d:" + d.id);
+  $("dmgPhotoBtn").textContent = has ? t("dmgPhotoRetake") : t("dmgPhotoBtn");
+}
+function closeSheet() {
+  const d = state.damages.find((x) => x.id === sheetId);
+  if (d) { d.note = $("dmgNote").value.trim(); const k = document.querySelector('input[name="kind"]:checked'); if (k) d.kind = k.value; }
+  sheetId = null; $("sheet").classList.remove("open"); $("sheetBg").classList.remove("open");
+  save(); renderDamage();
+}
+$("kindChips").addEventListener("change", (e) => { const d = state.damages.find((x) => x.id === sheetId); if (d) { d.kind = e.target.value; save(); } });
+$("dmgSave").addEventListener("click", closeSheet);
+$("sheetBg").addEventListener("click", closeSheet);
+$("dmgPhotoBtn").addEventListener("click", () => {
+  const d = state.damages.find((x) => x.id === sheetId); if (!d) return;
+  d.note = $("dmgNote").value.trim();
+  openCamera({ kind: "dmg", id: d.id });
+});
+$("dmgDel").addEventListener("click", async () => {
+  const id = sheetId;
+  state.damages = state.damages.filter((x) => x.id !== id);
+  sheetId = null; $("sheet").classList.remove("open"); $("sheetBg").classList.remove("open");
+  await delBlob("d:" + id); save(); renderDamage();
+});
+
+/* ================== signatures ================== */
+function SigPad(canvas, key) {
+  const box = canvas.parentElement, ph = box.querySelector(".ph");
+  const ctx = canvas.getContext("2d");
+  let drawing = false, last = null;
+  this.dirty = false;
+  const setup = () => {
+    const r = canvas.getBoundingClientRect(); if (!r.width) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const keep = this.dirty ? canvas.toDataURL() : null;
+    canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.lineWidth = 2.6; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#111";
+    if (keep) loadImg(keep).then((i) => ctx.drawImage(i, 0, 0, r.width, r.height));
+  };
+  this.setup = setup;
+  const pt = (e) => { const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  canvas.addEventListener("pointerdown", (e) => { drawing = true; last = pt(e); canvas.setPointerCapture(e.pointerId); ph.hidden = true; e.preventDefault(); });
+  canvas.addEventListener("pointermove", (e) => {
+    if (!drawing) return; const p = pt(e);
+    ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke(); last = p; this.dirty = true;
+  });
+  const end = async () => {
+    if (!drawing) return; drawing = false;
+    if (this.dirty) { const b = await new Promise((r) => canvas.toBlob(r, "image/png")); if (b) await setBlob(key, b); }
+  };
+  canvas.addEventListener("pointerup", end); canvas.addEventListener("pointercancel", end);
+  box.querySelector(".clr").addEventListener("click", async () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height); this.dirty = false; ph.hidden = false; await delBlob(key);
+  });
+  this.restore = async () => {
+    if (!blobs.has(key)) return;
+    this.dirty = true; ph.hidden = true; setup();
+    const r = canvas.getBoundingClientRect();
+    const i = await loadImg(urls.get(key)); ctx.drawImage(i, 0, 0, r.width, r.height);
+  };
+}
+const sigC = new SigPad($("sigCustomer"), "sig:customer");
+const sigD = new SigPad($("sigDriver"), "sig:driver");
+window.addEventListener("resize", () => { if (state.step === 3) { sigC.setup(); sigD.setup(); } });
+
+function renderAgree() { $("agreeText").textContent = state.type === "return" ? t("agreeReturn") : t("agreeDelivery"); }
+$("agree").addEventListener("change", (e) => { state.agree = e.target.checked; save(); });
+
+function damageSummary() {
+  if (!state.damages.length) return t("none");
+  return state.damages.map((d, i) => `#${i + 1} ${t("kinds")[d.kind]}${d.note ? " (" + d.note + ")" : ""}`).join("، ");
+}
+function renderMiniSum() {
+  const rows = [
+    [t("sumType"), state.type === "return" ? t("return") : t("delivery")],
+    [t("sumCar"), `${state.f.car || ""} · ${state.f.plate || ""}`],
+    [t("sumKm"), `${state.f.km || ""} km`],
+    [t("sumFuel"), fuelName()],
+    [t("sumPhotos"), `${ANGLE_IDS.filter((id) => blobs.has("p:" + id)).length}${blobs.has("video") ? " + 🎥" : ""}`],
+    [t("sumDamage"), damageSummary()],
+  ];
+  $("miniSum").innerHTML = rows.map(([a, b]) => `<div><span>${esc(a)}</span><b>${esc(b)}</b></div>`).join("");
+}
+
+/* ================== validation & navigation ================== */
+function validate(step) {
+  document.querySelectorAll("input.bad").forEach((i) => i.classList.remove("bad"));
+  if (step === 0) {
+    const req = ["plate", "customer", "phone", "driver", "km"];
+    const missing = req.filter((k) => !String(state.f[k] || "").trim());
+    missing.forEach((k) => $(k).classList.add("bad"));
+    if (missing.length || !state.type || state.fuel === "") return t("errRequired");
+    const p = fullPhone();
+    if (p.length < 9 || p.length > 15) { $("phone").classList.add("bad"); return t("errPhone"); }
+  }
+  if (step === 1) {
+    const miss = ANGLE_IDS.filter((id) => !blobs.has("p:" + id)).length;
+    if (miss) return t("errShots")(miss);
+  }
+  if (step === 2) {
+    if (!state.damages.length && !state.noDamage) return t("errDamage");
+    const i = state.damages.findIndex((d) => !blobs.has("d:" + d.id));
+    if (i >= 0) return t("errDmgPhoto")(i + 1);
+  }
+  if (step === 3) {
+    if (!state.agree || !blobs.has("sig:customer")) return t("errAgree");
+  }
+  return "";
+}
+
+async function go(step) {
+  state.step = step; save(); renderSteps(); window.scrollTo({ top: 0, behavior: "smooth" });
+  if (step === 3) { renderMiniSum(); renderAgree(); $("agree").checked = !!state.agree; requestAnimationFrame(() => { sigC.setup(); sigD.setup(); sigC.restore(); sigD.restore(); }); }
+  if (step === 4) await makeReport();
+}
+$("nextBtn").addEventListener("click", async () => {
+  const err = validate(state.step);
+  if (err) { $("err").textContent = err; return; }
+  if (state.step === 3) { state.finishedAt = Date.now(); if (!state.reportId) state.reportId = makeId(); }
+  await go(state.step + 1);
+});
+$("backBtn").addEventListener("click", () => { if (state.step > 0) go(state.step - 1); });
+
+FIELDS.forEach((k) => $(k).addEventListener("input", (e) => { state.f[k] = e.target.value; save(); }));
+
+function makeId() {
+  const d = new Date();
+  return `${state.type === "return" ? "RET" : "DEL"}-${String(d.getFullYear()).slice(2)}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}-${digits(state.f.plate).slice(-5) || "X"}`;
+}
+
+/* ================== report image ================== */
+let reportBlob = null;
+async function makeReport() {
+  busy(true);
+  try {
+    await document.fonts.ready;
+    reportBlob = await buildReport();
+    if (urls.has("report")) URL.revokeObjectURL(urls.get("report"));
+    urls.set("report", URL.createObjectURL(reportBlob));
+    $("preview").src = urls.get("report");
+  } catch (e) { console.error(e); toast(t("errFile")); }
+  finally { busy(false); }
+}
+
+async function buildReport() {
+  const rtl = state.lang === "ar";
+  const W = 1080, P = 44, F = "Cairo, Inter, sans-serif";
+  const photoKeys = ANGLE_IDS.filter((id) => blobs.has("p:" + id)).map((id, i) => ({ key: "p:" + id, label: `${ANGLE_IDS.indexOf(id) + 1}. ${t("angles")[ANGLE_IDS.indexOf(id)]}` }));
+  const dmgKeys = state.damages.map((d, i) => ({ key: "d:" + d.id, label: `#${i + 1} ${t("kinds")[d.kind]}${d.note ? " · " + d.note : ""}` })).filter((x) => blobs.has(x.key));
+  const cellW = (W - P * 2 - 20) / 2, cellH = Math.round(cellW * 0.75), capH = 44;
+  const rowsP = Math.ceil(photoKeys.length / 2), rowsD = Math.ceil(dmgKeys.length / 2);
+
+  // measure-free layout: compute heights up front
+  const headerH = 170, infoH = 4 * 64 + 30, diagH = 560;
+  const notesLines = state.f.notes ? Math.min(6, Math.ceil(state.f.notes.length / 70)) : 0;
+  const H = headerH + infoH + 60 + diagH + 40
+    + 60 + rowsP * (cellH + capH + 20)
+    + (rowsD ? 60 + rowsD * (cellH + capH + 20) : 0)
+    + (notesLines ? 60 + notesLines * 38 : 0)
+    + (state.video ? 60 : 0)
+    + 330 + 110;
+
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const x = c.getContext("2d");
+  x.direction = rtl ? "rtl" : "ltr";
+  const S = (a, b) => (rtl ? b : a); // pick left/right edge by direction
+  const text = (str, x0, x1, y, { size = 26, w = 600, color = "#1b1f2a", align = "start", ltr = false } = {}) => {
+    x.font = `${w} ${size}px ${F}`; x.fillStyle = color; x.textBaseline = "alphabetic";
+    x.direction = ltr ? "ltr" : rtl ? "rtl" : "ltr";
+    if (align === "center") { x.textAlign = "center"; x.fillText(str, (x0 + x1) / 2, y); }
+    else { x.textAlign = rtl ? "right" : "left"; x.fillText(str, S(x0, x1), y, x1 - x0); }
+    x.direction = rtl ? "rtl" : "ltr";
+  };
+  const isLatin = (v) => !/[\u0600-\u06FF]/.test(v);
+  const section = (title, y) => {
+    text(title, P, W - P, y + 34, { size: 30, w: 800, color: "#8a6a1f" });
+    x.fillStyle = "#e7dfc9"; x.fillRect(P, y + 48, W - P * 2, 2);
+    return y + 70;
+  };
+  const cover = async (key, dx, dy, dw, dh) => {
+    const img = await loadImg(urls.get(key));
+    const s = Math.max(dw / img.naturalWidth, dh / img.naturalHeight);
+    const sw = dw / s, sh = dh / s;
+    x.save(); x.beginPath(); x.roundRect ? x.roundRect(dx, dy, dw, dh, 14) : x.rect(dx, dy, dw, dh); x.clip();
+    x.drawImage(img, (img.naturalWidth - sw) / 2, (img.naturalHeight - sh) / 2, sw, sh, dx, dy, dw, dh);
+    x.restore();
+  };
+
+  // background
+  x.fillStyle = "#ffffff"; x.fillRect(0, 0, W, H);
+  // header
+  x.fillStyle = "#0b0d12"; x.fillRect(0, 0, W, headerH);
+  x.fillStyle = "#d6b25e"; x.fillRect(0, headerH - 6, W, 6);
+  text(CONFIG.COMPANY_NAME, P, W - P, 62, { size: 28, w: 700, color: "#f1d58c" });
+  text(state.type === "return" ? t("rTitleReturn") : t("rTitleDelivery"), P, W - P, 118, { size: 44, w: 800, color: "#ffffff" });
+  x.direction = "ltr";
+  x.font = `600 22px ${F}`; x.fillStyle = "#9aa1b2"; x.textAlign = rtl ? "left" : "right";
+  x.fillText(state.reportId, rtl ? P : W - P, 62);
+  x.direction = rtl ? "rtl" : "ltr";
+
+  // info grid
+  let y = headerH + 30;
+  const dur = state.startedAt && state.finishedAt ? Math.max(1, Math.round((state.finishedAt - state.startedAt) / 60000)) : null;
+  const info = [
+    [t("sumCar"), `${state.f.car || "-"}`], [t("plate"), state.f.plate || "-"],
+    [t("rCustomer"), state.f.customer || "-"], [t("rPhone"), "+" + fullPhone()],
+    [t("sumKm"), `${state.f.km} km`], [t("sumFuel"), fuelName()],
+    [t("rDate"), fmtDate(state.finishedAt || Date.now()) + (dur ? `  (${dur} min)` : "")], [t("rDriver"), state.f.driver || "-"],
+  ];
+  if (state.f.ref || state.f.location) { info.push([t("rRef"), state.f.ref || "-"], [t("rLocation"), state.f.location || "-"]); }
+  const colW = (W - P * 2 - 30) / 2;
+  info.forEach(([k, v], i) => {
+    const col = i % 2, row = Math.floor(i / 2);
+    const cx0 = rtl ? W - P - (col + 1) * colW - col * 30 : P + col * (colW + 30);
+    const cy = y + row * 64;
+    x.fillStyle = "#f5f3ee"; x.beginPath(); x.roundRect ? x.roundRect(cx0, cy, colW, 54, 10) : x.rect(cx0, cy, colW, 54); x.fill();
+    const kx = rtl ? [cx0 + colW * 0.66, cx0 + colW - 16] : [cx0 + 16, cx0 + colW * 0.34];
+    const vx = rtl ? [cx0 + 16, cx0 + colW * 0.64] : [cx0 + colW * 0.36, cx0 + colW - 16];
+    text(k, kx[0], kx[1], cy + 35, { size: 20, w: 600, color: "#7a7f8c" });
+    text(v, vx[0], vx[1], cy + 36, { size: 23, w: 700, ltr: isLatin(v) });
+  });
+  y += Math.ceil(info.length / 2) * 64 + 20;
+
+  // diagram + damage list
+  y = section(t("rDiagram"), y);
+  const dW = 240, dH = 480;
+  const dX = rtl ? W - P - dW - 40 : P + 40, dY = y + 30;
+  const svg = new XMLSerializer().serializeToString($("carSvg"));
+  const svgImg = await loadImg("data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="400"')));
+  x.fillStyle = "#0b0d12"; x.beginPath(); x.roundRect ? x.roundRect(dX - 30, dY - 30, dW + 60, dH + 60, 18) : x.rect(dX - 30, dY - 30, dW + 60, dH + 60); x.fill();
+  x.drawImage(svgImg, dX, dY, dW, dH);
+  x.font = `700 18px ${F}`; x.fillStyle = "#f1d58c"; x.textAlign = "center";
+  x.fillText(t("dFront"), dX + dW / 2, dY - 8); x.fillText(t("dRear"), dX + dW / 2, dY + dH + 22);
+  state.damages.forEach((d, i) => {
+    const mx = dX + (d.x / 100) * dW, my = dY + (d.y / 100) * dH;
+    x.beginPath(); x.arc(mx, my, 17, 0, Math.PI * 2); x.fillStyle = "#e5484d"; x.fill();
+    x.lineWidth = 3; x.strokeStyle = "#fff"; x.stroke();
+    x.direction = "ltr"; x.font = `800 18px ${F}`; x.fillStyle = "#fff"; x.textAlign = "center"; x.textBaseline = "middle";
+    x.fillText(String(i + 1), mx, my + 1); x.textBaseline = "alphabetic"; x.direction = rtl ? "rtl" : "ltr";
+  });
+  const lx0 = rtl ? P : dX + dW + 70, lx1 = rtl ? dX - 70 : W - P;
+  if (!state.damages.length) {
+    text(t("rNoDamage"), lx0, lx1, dY + 40, { size: 26, w: 800, color: "#14804a" });
+  } else {
+    state.damages.slice(0, 12).forEach((d, i) => {
+      text(`#${i + 1}  ${t("kinds")[d.kind]}${d.note ? " — " + d.note : ""}`, lx0, lx1, dY + 30 + i * 40, { size: 23, w: 700, color: "#1b1f2a" });
+    });
+  }
+  y += diagH;
+
+  // photos
+  const grid = async (items, y0) => {
+    for (let i = 0; i < items.length; i++) {
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx0 = rtl ? W - P - (col + 1) * cellW - col * 20 : P + col * (cellW + 20);
+      const cy = y0 + row * (cellH + capH + 20);
+      await cover(items[i].key, cx0, cy, cellW, cellH);
+      text(items[i].label, cx0 + 4, cx0 + cellW - 4, cy + cellH + 32, { size: 21, w: 700, color: "#333845" });
+    }
+    return y0 + Math.ceil(items.length / 2) * (cellH + capH + 20);
+  };
+  y = section(t("rPhotos"), y); y = await grid(photoKeys, y);
+  if (dmgKeys.length) { y = section(t("rClose"), y); y = await grid(dmgKeys, y); }
+
+  if (notesLines) {
+    y = section(t("rNotes"), y);
+    const words = state.f.notes.split(/\s+/); let line = "", lines = [];
+    x.font = `500 23px ${F}`;
+    words.forEach((w) => { const tst = line ? line + " " + w : w; if (x.measureText(tst).width > W - P * 2 && line) { lines.push(line); line = w; } else line = tst; });
+    if (line) lines.push(line);
+    lines.slice(0, notesLines).forEach((l, i) => text(l, P, W - P, y + 10 + i * 38, { size: 23, w: 500 }));
+    y += notesLines * 38 + 10;
+  }
+  if (state.video) { text("🎥 " + t("rVideo"), P, W - P, y + 40, { size: 23, w: 700, color: "#14804a" }); y += 60; }
+
+  // agreement + signatures
+  y += 20;
+  x.fillStyle = "#f5f3ee"; x.fillRect(P, y, W - P * 2, 300);
+  text(state.type === "return" ? t("agreeReturn") : t("agreeDelivery"), P + 20, W - P - 20, y + 44, { size: 20, w: 600, color: "#333845" });
+  const sw = (W - P * 2 - 60) / 2, sh = 170;
+  const sigs = [["sig:customer", t("sigCustomer") + ": " + (state.f.customer || "")], ["sig:driver", t("sigDriver") + ": " + (state.f.driver || "")]];
+  for (let i = 0; i < 2; i++) {
+    const sx = rtl ? W - P - 20 - (i + 1) * sw - i * 20 : P + 20 + i * (sw + 20), sy = y + 70;
+    x.fillStyle = "#ffffff"; x.fillRect(sx, sy, sw, sh);
+    x.strokeStyle = "#d9d3c2"; x.lineWidth = 2; x.strokeRect(sx, sy, sw, sh);
+    if (blobs.has(sigs[i][0])) {
+      const img = await loadImg(urls.get(sigs[i][0]));
+      const s = Math.min((sw - 20) / img.naturalWidth, (sh - 20) / img.naturalHeight);
+      x.drawImage(img, sx + (sw - img.naturalWidth * s) / 2, sy + (sh - img.naturalHeight * s) / 2, img.naturalWidth * s, img.naturalHeight * s);
+    }
+    text(sigs[i][1], sx, sx + sw, sy + sh + 32, { size: 20, w: 700, color: "#333845" });
+  }
+  y += 330;
+  text(t("rFooter"), P, W - P, y + 30, { size: 18, w: 500, color: "#7a7f8c", align: "center" });
+  text(`${state.reportId} · ${fmtDate(state.finishedAt || Date.now())}`, P, W - P, y + 62, { size: 18, w: 600, color: "#7a7f8c", align: "center" });
+
+  return await canvasBlob(c, 0.85);
+}
+
+/* ================== share ================== */
+function summaryMsg() {
+  return t("msg")({
+    customer: state.f.customer || "", typeName: state.type === "return" ? t("typeNameReturn") : t("typeNameDelivery"),
+    car: state.f.car || "", plate: state.f.plate || "", date: fmtDate(state.finishedAt || Date.now()),
+    km: state.f.km || "", fuel: fuelName(), damage: damageSummary(), id: state.reportId,
+  });
+}
+function reportFile() { return new File([reportBlob], `${state.reportId}.jpg`, { type: "image/jpeg" }); }
+$("shareBtn").addEventListener("click", async () => {
+  if (!reportBlob) return;
+  const files = [reportFile()];
+  if (blobs.has("video") && state.video) files.push(new File([blobs.get("video")], `${state.reportId}-360.${(state.video.type.split("/")[1] || "mp4").replace("quicktime", "mov")}`, { type: state.video.type }));
+  try {
+    let use = files;
+    if (navigator.canShare && !navigator.canShare({ files: use })) use = [files[0]];
+    if (navigator.canShare && navigator.canShare({ files: use })) {
+      await navigator.share({ files: use, text: summaryMsg(), title: state.reportId });
+      toast(t("shared"));
+    } else { download(); }
+  } catch (e) { if (e.name !== "AbortError") download(); }
+});
+function download() {
+  const a = document.createElement("a"); a.href = urls.get("report"); a.download = `${state.reportId}.jpg`;
+  document.body.appendChild(a); a.click(); a.remove(); toast(t("downloaded"));
+}
+$("dlBtn").addEventListener("click", () => reportBlob && download());
+$("waBtn").addEventListener("click", () => window.open(`https://wa.me/${fullPhone()}?text=${encodeURIComponent(summaryMsg())}`, "_blank"));
+$("waCompanyBtn").addEventListener("click", () => {
+  const m = `${state.reportId}\n${summaryMsg()}\n\n${t("rDriver")}: ${state.f.driver}`;
+  window.open(`https://wa.me/${CONFIG.COMPANY_WHATSAPP}?text=${encodeURIComponent(m)}`, "_blank");
+});
+
+/* ================== language & new ================== */
+function applyLang() {
+  const L = state.lang;
+  document.documentElement.lang = L; document.documentElement.dir = L === "ar" ? "rtl" : "ltr";
+  document.title = `R Dynamic Plus | ${L === "ar" ? "فحص السيارة" : "Vehicle Inspection"}`;
+  $("langBtn").textContent = L === "ar" ? "English" : "عربي";
+  document.querySelectorAll("[data-t]").forEach((el) => { const v = T[L][el.dataset.t]; if (typeof v === "string") el.textContent = v; });
+  document.querySelectorAll("[data-tp]").forEach((el) => { el.placeholder = T[L][el.dataset.tp]; });
+  renderSteps(); renderFuel(); renderShots(); renderVideo(); renderDamage(); renderAgree();
+  if (state.step === 3) renderMiniSum();
+}
+$("langBtn").addEventListener("click", async () => { state.lang = state.lang === "ar" ? "en" : "ar"; save(); applyLang(); if (state.step === 4) await makeReport(); });
+$("newBtn").addEventListener("click", async () => {
+  if (!confirm(t("confirmNew"))) return;
+  for (const k of [...urls.keys()]) URL.revokeObjectURL(urls.get(k));
+  blobs.clear(); urls.clear(); await idb.clear();
+  state = freshState(); save(); location.reload();
+});
+
+/* ================== boot ================== */
+(async function boot() {
+  try { const s = JSON.parse(localStorage.getItem(STATE_KEY) || "null"); if (s) state = Object.assign(freshState(), s); } catch (e) {}
+  const keys = [...ANGLE_IDS.map((id) => "p:" + id), ...state.damages.map((d) => "d:" + d.id), "sig:customer", "sig:driver", "video"];
+  for (const k of keys) { const b = await idb.get(k); if (b) { blobs.set(k, b); urls.set(k, URL.createObjectURL(b)); } }
+  FIELDS.forEach((k) => { if (state.f[k] != null) $(k).value = state.f[k]; });
+  document.querySelectorAll('input[name="type"]').forEach((r) => (r.checked = r.value === state.type));
+  $("noDamage").checked = !!state.noDamage;
+  applyLang();
+  if (state.step === 4) { if (!state.reportId) state.reportId = makeId(); await go(4); }
+  else if (state.step === 3) await go(3);
+})();
+</script>
+</body>
+</html>
