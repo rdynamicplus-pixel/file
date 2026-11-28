@@ -218,6 +218,12 @@
   [hidden] { display: none !important; }
   .busy { position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 30; display: none; place-items: center; font-weight: 700; }
   .busy.show { display: grid; }
+  .viewer { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.94); display: none; flex-direction: column; }
+  .viewer.show { display: flex; }
+  .viewer .vh { display: flex; align-items: center; gap: 10px; padding: calc(12px + env(safe-area-inset-top)) 16px 12px; font-size: 14px; line-height: 1.6; }
+  .viewer .vh p { flex: 1; margin: 0; }
+  .viewer .vb { flex: 1; overflow: auto; padding: 0 16px calc(16px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling: touch; }
+  .viewer img { width: 100%; display: block; border-radius: 10px; -webkit-touch-callout: default; user-select: auto; }
 </style>
 </head>
 <body>
@@ -380,6 +386,10 @@
 <input type="file" id="camInput" accept="image/*" capture="environment" hidden>
 <input type="file" id="vidInput" accept="video/*" capture="environment" hidden>
 <div class="toast" id="toast"></div>
+<div class="viewer" id="viewer">
+  <div class="vh"><p data-t="viewerHint">اضغط مطوّلاً على الصورة، واختار "مشاركة" وبعدين واتساب، أو "حفظ في الصور".</p><button class="pill" id="viewerClose" type="button" data-t="close">إغلاق</button></div>
+  <div class="vb"><img id="viewerImg" alt=""></div>
+</div>
 <div class="busy" id="busy"><span data-t="working">جاري التجهيز…</span></div>
 
 <script>
@@ -419,6 +429,7 @@ const T = {
     agreeReturn: "سلّمت السيارة وشفتها كاملة مع السائق، وحالتها مثل ما هي مسجّلة بهالتقرير والصور.",
     sigCustomer: "توقيع الزبون", sigDriver: "توقيع السائق", signHere: "وقّع هون بإصبعك", clear: "مسح",
     s5h: "التقرير جاهز", s5p: "ابعت التقرير للزبون على واتساب، وابعت نسخة لمجموعة الشركة. هيك صار عند الطرفين نفس الدليل.",
+    viewerHint: "اضغط مطوّلاً على الصورة، واختار \"مشاركة\" وبعدين واتساب، أو \"حفظ في الصور\".", close: "إغلاق", shareFailed: "ما انفتحت قائمة المشاركة", 
     share: "١. ابعت صورة التقرير", shareVideo: "ابعت فيديو 360°", waCustomer: "٢. ابعت الملخص للزبون على واتساب", waCompany: "رسالة واتساب للشركة", download: "تنزيل التقرير على الموبايل",
     s5note: "الزر الأول بيفتح قائمة المشاركة: اختار واتساب وبعدين الزبون، وابعت الصورة. بعدها اكبس الزر الثاني حتى يوصله الملخص مكتوب.",
     back: "رجوع", next: "التالي", finish: "إنهاء وإنشاء التقرير", working: "جاري التجهيز…",
@@ -466,6 +477,7 @@ const T = {
     agreeReturn: "I returned the car, checked it fully with the driver, and its condition is as recorded in this report and photos.",
     sigCustomer: "Customer signature", sigDriver: "Driver signature", signHere: "Sign here with your finger", clear: "Clear",
     s5h: "Report ready", s5p: "Send the report to the customer on WhatsApp and a copy to the company group, so both sides hold the same evidence.",
+    viewerHint: "Long-press the image and choose \"Share\" then WhatsApp, or \"Save to Photos\".", close: "Close", shareFailed: "The share menu didn't open",
     share: "1. Send report image", shareVideo: "Send 360° video", waCustomer: "2. Send summary to customer on WhatsApp", waCompany: "WhatsApp message to company", download: "Download report",
     s5note: "Button 1 opens the share menu: pick WhatsApp, then the customer, and send the image. Then tap button 2 so the written summary reaches them too.",
     back: "Back", next: "Next", finish: "Finish & create report", working: "Preparing…",
@@ -854,6 +866,7 @@ async function makeReport() {
   try {
     await document.fonts.ready;
     reportBlob = await buildReport();
+    reportFileObj = reportFile();
     if (urls.has("report")) URL.revokeObjectURL(urls.get("report"));
     urls.set("report", URL.createObjectURL(reportBlob));
     $("preview").src = urls.get("report");
@@ -1027,15 +1040,28 @@ function summaryMsg() {
 function reportFile() { return new File([reportBlob], `${state.reportId}.jpg`, { type: "image/jpeg" }); }
 // Share files ONLY: when text rides along, WhatsApp on iPhone sends the text and drops the image.
 // The written summary goes separately through the wa.me button.
-async function shareFiles(files, fallback) {
-  try {
-    if (navigator.canShare && navigator.canShare({ files })) {
-      await navigator.share({ files });
-      toast(t("shared"));
-    } else fallback();
-  } catch (e) { if (e.name !== "AbortError") fallback(); }
+// Called straight from the click (no await before navigator.share) so the browser keeps the tap's permission.
+// If the share menu can't open, or closes instantly with an error, fall back instead of doing nothing.
+function shareFiles(files, fallback) {
+  let ok = false;
+  try { ok = !!(navigator.share && navigator.canShare && navigator.canShare({ files })); } catch (e) {}
+  if (!ok) { toast(t("shareFailed") + " (unsupported)"); fallback(); return; }
+  const startedAt = Date.now();
+  navigator.share({ files }).then(() => toast(t("shared"))).catch((e) => {
+    // A real cancel by the user takes a moment; an instant AbortError/NotAllowedError means it never showed.
+    if (e && e.name === "AbortError" && Date.now() - startedAt > 1200) return;
+    console.error(e);
+    toast(t("shareFailed") + " (" + (e && e.name || "error") + ")");
+    fallback();
+  });
 }
-$("shareBtn").addEventListener("click", () => { if (reportBlob) shareFiles([reportFile()], download); });
+let reportFileObj = null;
+function showViewer() { if (!urls.get("report")) return; $("viewerImg").src = urls.get("report"); $("viewer").classList.add("show"); }
+$("viewerClose").addEventListener("click", () => $("viewer").classList.remove("show"));
+$("shareBtn").addEventListener("click", () => {
+  if (!reportBlob) { toast(t("working")); return; }
+  shareFiles([reportFileObj || reportFile()], showViewer);
+});
 $("videoShareBtn").addEventListener("click", () => {
   if (!blobs.has("video") || !state.video) return;
   const ext = (state.video.type.split("/")[1] || "mp4").replace("quicktime", "mov");
@@ -1046,7 +1072,9 @@ function download() {
   const a = document.createElement("a"); a.href = urls.get("report"); a.download = `${state.reportId}.jpg`;
   document.body.appendChild(a); a.click(); a.remove(); toast(t("downloaded"));
 }
-$("dlBtn").addEventListener("click", () => reportBlob && download());
+// iPhone ignores <a download> for in-page images, so show the image to long-press instead.
+const IS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+$("dlBtn").addEventListener("click", () => { if (!reportBlob) return; IS_IOS ? showViewer() : download(); });
 $("waBtn").addEventListener("click", () => window.open(`https://wa.me/${fullPhone()}?text=${encodeURIComponent(summaryMsg())}`, "_blank"));
 $("waCompanyBtn").addEventListener("click", () => {
   const m = `${state.reportId}\n${summaryMsg()}\n\n${t("rDriver")}: ${state.f.driver}`;
