@@ -347,6 +347,10 @@
   <section class="card" data-step="4" hidden>
     <h2 data-t="s5h">التقرير جاهز</h2>
     <p class="lead" data-t="s5p">ابعت التقرير للزبون على واتساب، وابعت نسخة لمجموعة الشركة. هيك صار عند الطرفين نفس الدليل.</p>
+    <div id="repErr" hidden style="margin:6px 0 14px">
+      <p class="err" id="repErrMsg" style="margin:0 0 10px"></p>
+      <button class="btn sec" id="repRetry" type="button" data-t="retry">إعادة المحاولة</button>
+    </div>
     <img class="preview" id="preview" alt="">
     <div class="stack">
       <button class="btn" id="shareBtn" type="button" data-t="share">١. ابعت صورة التقرير</button>
@@ -429,6 +433,7 @@ const T = {
     agreeReturn: "سلّمت السيارة وشفتها كاملة مع السائق، وحالتها مثل ما هي مسجّلة بهالتقرير والصور.",
     sigCustomer: "توقيع الزبون", sigDriver: "توقيع السائق", signHere: "وقّع هون بإصبعك", clear: "مسح",
     s5h: "التقرير جاهز", s5p: "ابعت التقرير للزبون على واتساب، وابعت نسخة لمجموعة الشركة. هيك صار عند الطرفين نفس الدليل.",
+    repFailed: "ما قدرنا نجهّز صورة التقرير", retry: "إعادة المحاولة",
     viewerHint: "اضغط مطوّلاً على الصورة، واختار \"مشاركة\" وبعدين واتساب، أو \"حفظ في الصور\".", close: "إغلاق", shareFailed: "ما انفتحت قائمة المشاركة", 
     share: "١. ابعت صورة التقرير", shareVideo: "ابعت فيديو 360°", waCustomer: "٢. ابعت الملخص للزبون على واتساب", waCompany: "رسالة واتساب للشركة", download: "تنزيل التقرير على الموبايل",
     s5note: "الزر الأول بيفتح قائمة المشاركة: اختار واتساب وبعدين الزبون، وابعت الصورة. بعدها اكبس الزر الثاني حتى يوصله الملخص مكتوب.",
@@ -477,6 +482,7 @@ const T = {
     agreeReturn: "I returned the car, checked it fully with the driver, and its condition is as recorded in this report and photos.",
     sigCustomer: "Customer signature", sigDriver: "Driver signature", signHere: "Sign here with your finger", clear: "Clear",
     s5h: "Report ready", s5p: "Send the report to the customer on WhatsApp and a copy to the company group, so both sides hold the same evidence.",
+    repFailed: "Couldn't build the report image", retry: "Try again",
     viewerHint: "Long-press the image and choose \"Share\" then WhatsApp, or \"Save to Photos\".", close: "Close", shareFailed: "The share menu didn't open",
     share: "1. Send report image", shareVideo: "Send 360° video", waCustomer: "2. Send summary to customer on WhatsApp", waCompany: "WhatsApp message to company", download: "Download report",
     s5note: "Button 1 opens the share menu: pick WhatsApp, then the customer, and send the image. Then tap button 2 so the written summary reaches them too.",
@@ -596,7 +602,10 @@ async function stampPhoto(file, label) {
     x.fillText(`${state.f.plate || ""}  ·  ${fmtDate(Date.now())}`, bh * 0.4, h - bh / 2);
     x.direction = state.lang === "ar" ? "rtl" : "ltr"; x.textAlign = "right";
     x.fillText(label, w - bh * 0.4, h - bh / 2);
-    return await canvasBlob(c);
+    const out = await canvasBlob(c);
+    c.width = c.height = 0; // iPhone caps total canvas memory: release it now
+    if (!out) throw new Error("photo export failed");
+    return out;
   } finally { URL.revokeObjectURL(url); }
 }
 
@@ -870,7 +879,13 @@ async function makeReport() {
     if (urls.has("report")) URL.revokeObjectURL(urls.get("report"));
     urls.set("report", URL.createObjectURL(reportBlob));
     $("preview").src = urls.get("report");
-  } catch (e) { console.error(e); toast(t("errFile")); }
+    $("repErr").hidden = true;
+  } catch (e) {
+    console.error(e);
+    reportBlob = null;
+    $("repErr").hidden = false;
+    $("repErrMsg").textContent = t("repFailed") + " (" + ((e && (e.message || e.name)) || "error") + ")";
+  }
   finally { busy(false); }
 }
 
@@ -894,6 +909,7 @@ async function buildReport() {
 
   const c = document.createElement("canvas"); c.width = W; c.height = H;
   const x = c.getContext("2d");
+  if (!x) throw new Error("canvas unavailable (memory)");
   x.direction = rtl ? "rtl" : "ltr";
   const S = (a, b) => (rtl ? b : a); // pick left/right edge by direction
   const text = (str, x0, x1, y, { size = 26, w = 600, color = "#1b1f2a", align = "start", ltr = false } = {}) => {
@@ -910,7 +926,9 @@ async function buildReport() {
     return y + 70;
   };
   const cover = async (key, dx, dy, dw, dh) => {
-    const img = await loadImg(urls.get(key));
+    let img;
+    try { img = await loadImg(urls.get(key)); }
+    catch (e) { console.warn("photo", key, e); x.fillStyle = "#e7e3d8"; x.fillRect(dx, dy, dw, dh); return; }
     const s = Math.max(dw / img.naturalWidth, dh / img.naturalHeight);
     const sw = dw / s, sh = dh / s;
     x.save(); x.beginPath(); x.roundRect ? x.roundRect(dx, dy, dw, dh, 14) : x.rect(dx, dy, dw, dh); x.clip();
@@ -957,10 +975,18 @@ async function buildReport() {
   y = section(t("rDiagram"), y);
   const dW = 240, dH = 480;
   const dX = rtl ? W - P - dW - 40 : P + 40, dY = y + 30;
-  const svg = new XMLSerializer().serializeToString($("carSvg"));
-  const svgImg = await loadImg("data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="400"')));
   x.fillStyle = "#0b0d12"; x.beginPath(); x.roundRect ? x.roundRect(dX - 30, dY - 30, dW + 60, dH + 60, 18) : x.rect(dX - 30, dY - 30, dW + 60, dH + 60); x.fill();
-  x.drawImage(svgImg, dX, dY, dW, dH);
+  try {
+    // XMLSerializer already writes xmlns; adding it twice makes Safari reject the SVG.
+    let svg = new XMLSerializer().serializeToString($("carSvg"));
+    svg = svg.replace(/^<svg\b/, '<svg width="200" height="400"');
+    if (!/^<svg[^>]*\sxmlns=/.test(svg)) svg = svg.replace(/^<svg\b/, '<svg xmlns="http://www.w3.org/2000/svg"');
+    const svgImg = await loadImg("data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg));
+    x.drawImage(svgImg, dX, dY, dW, dH);
+  } catch (e) {
+    console.warn("diagram", e);
+    x.strokeStyle = "#d6b25e"; x.lineWidth = 3; x.beginPath(); x.roundRect ? x.roundRect(dX + 30, dY + 10, dW - 60, dH - 20, 50) : x.rect(dX + 30, dY + 10, dW - 60, dH - 20); x.stroke();
+  }
   x.font = `700 18px ${F}`; x.fillStyle = "#f1d58c"; x.textAlign = "center";
   x.fillText(t("dFront"), dX + dW / 2, dY - 8); x.fillText(t("dRear"), dX + dW / 2, dY + dH + 22);
   state.damages.forEach((d, i) => {
@@ -1016,9 +1042,9 @@ async function buildReport() {
     x.fillStyle = "#ffffff"; x.fillRect(sx, sy, sw, sh);
     x.strokeStyle = "#d9d3c2"; x.lineWidth = 2; x.strokeRect(sx, sy, sw, sh);
     if (blobs.has(sigs[i][0])) {
-      const img = await loadImg(urls.get(sigs[i][0]));
-      const s = Math.min((sw - 20) / img.naturalWidth, (sh - 20) / img.naturalHeight);
-      x.drawImage(img, sx + (sw - img.naturalWidth * s) / 2, sy + (sh - img.naturalHeight * s) / 2, img.naturalWidth * s, img.naturalHeight * s);
+      const img = await loadImg(urls.get(sigs[i][0])).catch(() => null);
+      const s = img ? Math.min((sw - 20) / img.naturalWidth, (sh - 20) / img.naturalHeight) : 0;
+      if (img) x.drawImage(img, sx + (sw - img.naturalWidth * s) / 2, sy + (sh - img.naturalHeight * s) / 2, img.naturalWidth * s, img.naturalHeight * s);
     }
     text(sigs[i][1], sx, sx + sw, sy + sh + 32, { size: 20, w: 700, color: "#333845" });
   }
@@ -1026,7 +1052,16 @@ async function buildReport() {
   text(t("rFooter"), P, W - P, y + 30, { size: 18, w: 500, color: "#7a7f8c", align: "center" });
   text(`${state.reportId} · ${fmtDate(state.finishedAt || Date.now())}`, P, W - P, y + 62, { size: 18, w: 600, color: "#7a7f8c", align: "center" });
 
-  return await canvasBlob(c, 0.85);
+  let blob = await canvasBlob(c, 0.85);
+  if (!blob) {
+    // iPhone refuses very large canvases: retry at a smaller size.
+    const s2 = document.createElement("canvas"); s2.width = Math.round(W * 0.6); s2.height = Math.round(H * 0.6);
+    s2.getContext("2d").drawImage(c, 0, 0, s2.width, s2.height);
+    blob = await canvasBlob(s2, 0.8); s2.width = s2.height = 0;
+  }
+  c.width = c.height = 0;
+  if (!blob) throw new Error("toBlob returned null");
+  return blob;
 }
 
 /* ================== share ================== */
@@ -1056,10 +1091,11 @@ function shareFiles(files, fallback) {
   });
 }
 let reportFileObj = null;
+$("repRetry").addEventListener("click", () => makeReport());
 function showViewer() { if (!urls.get("report")) return; $("viewerImg").src = urls.get("report"); $("viewer").classList.add("show"); }
 $("viewerClose").addEventListener("click", () => $("viewer").classList.remove("show"));
 $("shareBtn").addEventListener("click", () => {
-  if (!reportBlob) { toast(t("working")); return; }
+  if (!reportBlob) { makeReport(); return; }
   shareFiles([reportFileObj || reportFile()], showViewer);
 });
 $("videoShareBtn").addEventListener("click", () => {
