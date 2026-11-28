@@ -343,12 +343,13 @@
     <p class="lead" data-t="s5p">ابعت التقرير للزبون على واتساب، وابعت نسخة لمجموعة الشركة. هيك صار عند الطرفين نفس الدليل.</p>
     <img class="preview" id="preview" alt="">
     <div class="stack">
-      <button class="btn" id="shareBtn" type="button" data-t="share">مشاركة التقرير (واتساب…)</button>
-      <button class="btn wa" id="waBtn" type="button" data-t="waCustomer">رسالة واتساب للزبون</button>
+      <button class="btn" id="shareBtn" type="button" data-t="share">١. ابعت صورة التقرير</button>
+      <button class="btn sec" id="videoShareBtn" type="button" data-t="shareVideo" hidden>ابعت فيديو 360°</button>
+      <button class="btn wa" id="waBtn" type="button" data-t="waCustomer">٢. ابعت الملخص للزبون على واتساب</button>
       <button class="btn sec" id="waCompanyBtn" type="button" data-t="waCompany">رسالة واتساب للشركة</button>
       <button class="btn sec" id="dlBtn" type="button" data-t="download">تنزيل التقرير على الموبايل</button>
     </div>
-    <p class="lead" style="margin-top:14px;font-size:13px" data-t="s5note">على بعض الموبايلات واتساب ما بيقبل صورة ونص مع بعض: إذا ما وصل النص، ابعت "رسالة واتساب للزبون" بعد الصورة.</p>
+    <p class="lead" style="margin-top:14px;font-size:13px" data-t="s5note"></p>
   </section>
 
   <p class="err" id="err"></p>
@@ -418,8 +419,8 @@ const T = {
     agreeReturn: "سلّمت السيارة وشفتها كاملة مع السائق، وحالتها مثل ما هي مسجّلة بهالتقرير والصور.",
     sigCustomer: "توقيع الزبون", sigDriver: "توقيع السائق", signHere: "وقّع هون بإصبعك", clear: "مسح",
     s5h: "التقرير جاهز", s5p: "ابعت التقرير للزبون على واتساب، وابعت نسخة لمجموعة الشركة. هيك صار عند الطرفين نفس الدليل.",
-    share: "مشاركة التقرير (واتساب…)", waCustomer: "رسالة واتساب للزبون", waCompany: "رسالة واتساب للشركة", download: "تنزيل التقرير على الموبايل",
-    s5note: "على بعض الموبايلات واتساب ما بيقبل صورة ونص مع بعض: إذا ما وصل النص، ابعت \"رسالة واتساب للزبون\" بعد الصورة.",
+    share: "١. ابعت صورة التقرير", shareVideo: "ابعت فيديو 360°", waCustomer: "٢. ابعت الملخص للزبون على واتساب", waCompany: "رسالة واتساب للشركة", download: "تنزيل التقرير على الموبايل",
+    s5note: "الزر الأول بيفتح قائمة المشاركة: اختار واتساب وبعدين الزبون، وابعت الصورة. بعدها اكبس الزر الثاني حتى يوصله الملخص مكتوب.",
     back: "رجوع", next: "التالي", finish: "إنهاء وإنشاء التقرير", working: "جاري التجهيز…",
     sumType: "النوع", sumCar: "السيارة", sumKm: "العداد", sumFuel: "البنزين", sumPhotos: "الصور", sumDamage: "الأضرار", none: "لا يوجد",
     errRequired: "عبّي كل الخانات المطلوبة (*).", errPhone: "رقم الواتساب مش صحيح.",
@@ -437,7 +438,7 @@ const T = {
     rDiagram: "خريطة الأضرار", rPhotos: "صور الفحص", rClose: "صور الأضرار من قريب", rNotes: "ملاحظات",
     rNoDamage: "✓ لا يوجد أي خدش أو ضرر (بتأكيد الطرفين)", rVideo: "تم تصوير فيديو 360° للسيارة ومشاركته مع التقرير",
     rFooter: "تم إنشاء هذا التقرير على موبايل السائق لحظة الفحص. الوقت والتاريخ مطبوعين على كل صورة.",
-    msg: (d) => `مرحبا ${d.customer} 👋\nهاد ملخص ${d.typeName} السيارة من ${CONFIG.COMPANY_NAME}:\n\n🚗 ${d.car} · ${d.plate}\n📅 ${d.date}\n🛣️ العداد: ${d.km} كم\n⛽ البنزين: ${d.fuel}\n🔍 الأضرار: ${d.damage}\n🧾 رقم التقرير: ${d.id}\n\nتقرير الفحص بالصور مرفق. شكراً إلك 🙏`,
+    msg: (d) => `مرحبا ${d.customer} 👋\nهاد ملخص ${d.typeName} السيارة من ${CONFIG.COMPANY_NAME}:\n\n🚗 ${d.car ? d.car + " · " : ""}${d.plate}\n📅 ${d.date}\n🛣️ العداد: ${d.km} كم\n⛽ البنزين: ${d.fuel}\n🔍 الأضرار: ${d.damage}\n🧾 رقم التقرير: ${d.id}\n\nبعتنالك تقرير الفحص بالصور بصورة منفصلة. شكراً إلك 🙏`,
     typeNameDelivery: "تسليم", typeNameReturn: "استلام",
   },
   en: {
@@ -465,8 +466,8 @@ const T = {
     agreeReturn: "I returned the car, checked it fully with the driver, and its condition is as recorded in this report and photos.",
     sigCustomer: "Customer signature", sigDriver: "Driver signature", signHere: "Sign here with your finger", clear: "Clear",
     s5h: "Report ready", s5p: "Send the report to the customer on WhatsApp and a copy to the company group, so both sides hold the same evidence.",
-    share: "Share report (WhatsApp…)", waCustomer: "WhatsApp message to customer", waCompany: "WhatsApp message to company", download: "Download report",
-    s5note: "Some phones drop the text when sharing an image to WhatsApp. If it's missing, send \"WhatsApp message to customer\" after the image.",
+    share: "1. Send report image", shareVideo: "Send 360° video", waCustomer: "2. Send summary to customer on WhatsApp", waCompany: "WhatsApp message to company", download: "Download report",
+    s5note: "Button 1 opens the share menu: pick WhatsApp, then the customer, and send the image. Then tap button 2 so the written summary reaches them too.",
     back: "Back", next: "Next", finish: "Finish & create report", working: "Preparing…",
     sumType: "Type", sumCar: "Car", sumKm: "Odometer", sumFuel: "Fuel", sumPhotos: "Photos", sumDamage: "Damage", none: "None",
     errRequired: "Fill in all required fields (*).", errPhone: "The WhatsApp number is not valid.",
@@ -483,7 +484,7 @@ const T = {
     rDiagram: "Damage map", rPhotos: "Inspection photos", rClose: "Damage close-ups", rNotes: "Notes",
     rNoDamage: "✓ No scratches or damage (confirmed by both sides)", rVideo: "A 360° video of the car was recorded and shared with this report",
     rFooter: "Created on the driver's phone at the time of inspection. Date and time are stamped on every photo.",
-    msg: (d) => `Hi ${d.customer} 👋\nHere is the ${d.typeName} inspection summary from ${CONFIG.COMPANY_NAME}:\n\n🚗 ${d.car} · ${d.plate}\n📅 ${d.date}\n🛣️ Odometer: ${d.km} km\n⛽ Fuel: ${d.fuel}\n🔍 Damage: ${d.damage}\n🧾 Report no.: ${d.id}\n\nThe photo report is attached. Thank you 🙏`,
+    msg: (d) => `Hi ${d.customer} 👋\nHere is the ${d.typeName} inspection summary from ${CONFIG.COMPANY_NAME}:\n\n🚗 ${d.car ? d.car + " · " : ""}${d.plate}\n📅 ${d.date}\n🛣️ Odometer: ${d.km} km\n⛽ Fuel: ${d.fuel}\n🔍 Damage: ${d.damage}\n🧾 Report no.: ${d.id}\n\nThe photo report was sent as a separate image. Thank you 🙏`,
     typeNameDelivery: "delivery", typeNameReturn: "return",
   },
 };
@@ -829,7 +830,7 @@ function validate(step) {
 async function go(step) {
   state.step = step; save(); renderSteps(); window.scrollTo({ top: 0, behavior: "smooth" });
   if (step === 3) { renderMiniSum(); renderAgree(); $("agree").checked = !!state.agree; requestAnimationFrame(() => { sigC.setup(); sigD.setup(); sigC.restore(); sigD.restore(); }); }
-  if (step === 4) await makeReport();
+  if (step === 4) { $("videoShareBtn").hidden = !blobs.has("video"); await makeReport(); }
 }
 $("nextBtn").addEventListener("click", async () => {
   const err = validate(state.step);
@@ -1024,18 +1025,22 @@ function summaryMsg() {
   });
 }
 function reportFile() { return new File([reportBlob], `${state.reportId}.jpg`, { type: "image/jpeg" }); }
-$("shareBtn").addEventListener("click", async () => {
-  if (!reportBlob) return;
-  const files = [reportFile()];
-  if (blobs.has("video") && state.video) files.push(new File([blobs.get("video")], `${state.reportId}-360.${(state.video.type.split("/")[1] || "mp4").replace("quicktime", "mov")}`, { type: state.video.type }));
+// Share files ONLY: when text rides along, WhatsApp on iPhone sends the text and drops the image.
+// The written summary goes separately through the wa.me button.
+async function shareFiles(files, fallback) {
   try {
-    let use = files;
-    if (navigator.canShare && !navigator.canShare({ files: use })) use = [files[0]];
-    if (navigator.canShare && navigator.canShare({ files: use })) {
-      await navigator.share({ files: use, text: summaryMsg(), title: state.reportId });
+    if (navigator.canShare && navigator.canShare({ files })) {
+      await navigator.share({ files });
       toast(t("shared"));
-    } else { download(); }
-  } catch (e) { if (e.name !== "AbortError") download(); }
+    } else fallback();
+  } catch (e) { if (e.name !== "AbortError") fallback(); }
+}
+$("shareBtn").addEventListener("click", () => { if (reportBlob) shareFiles([reportFile()], download); });
+$("videoShareBtn").addEventListener("click", () => {
+  if (!blobs.has("video") || !state.video) return;
+  const ext = (state.video.type.split("/")[1] || "mp4").replace("quicktime", "mov");
+  const f = new File([blobs.get("video")], `${state.reportId}-360.${ext}`, { type: state.video.type || "video/mp4" });
+  shareFiles([f], () => { const a = document.createElement("a"); a.href = urls.get("video"); a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); });
 });
 function download() {
   const a = document.createElement("a"); a.href = urls.get("report"); a.download = `${state.reportId}.jpg`;
